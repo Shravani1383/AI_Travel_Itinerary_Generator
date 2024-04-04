@@ -668,14 +668,18 @@ def text_to_doc(itinerary, input_dict):
         file_path = os.path.join(folder_name, f'day_{day_number}_itinerary.docx')
         tpl.save(file_path)
 
+
+    def sort_files_in_folder(folder_path):
+        files = os.listdir(folder_path)
+        files.sort()  # Sort files alphabetically
+        for index, file in enumerate(files):
+            print(f"{index + 1}. {file}")
     # Create a Document object
     destDoc = Document()
-    # # Load the destination document
-    # destDoc.LoadFromFile("mergeDocs/front_page.docx")
 
     # Define the folder path containing the files to merge
     folder_path = "generated_itineraries"
-
+    sort_files_in_folder(folder_path)
     # Create the directory if it doesn't exist
     os.makedirs(folder_path, exist_ok=True)
 
