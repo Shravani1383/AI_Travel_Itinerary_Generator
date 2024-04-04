@@ -669,17 +669,12 @@ def text_to_doc(itinerary, input_dict):
         tpl.save(file_path)
 
 
-    def sort_files_in_folder(folder_path):
-        files = os.listdir(folder_path)
-        files.sort()  # Sort files alphabetically
-        for index, file in enumerate(files):
-            print(f"{index + 1}. {file}")
     # Create a Document object
     destDoc = Document()
 
     # Define the folder path containing the files to merge
     folder_path = "generated_itineraries"
-    sort_files_in_folder(folder_path)
+
     # Create the directory if it doesn't exist
     os.makedirs(folder_path, exist_ok=True)
 
@@ -689,7 +684,7 @@ def text_to_doc(itinerary, input_dict):
     # Filter only the .docx files
     files_to_merge = [file for file in files_to_merge if file.endswith('.docx')]
     files_to_merge.sort()
-    st.write(files_to_merge)
+
     # Loop through the list
     for file in files_to_merge:
         # Construct the full file path
