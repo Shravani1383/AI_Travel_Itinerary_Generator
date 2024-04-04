@@ -32,6 +32,9 @@ st.title("Tour Itinerary Generator")
 env_file_path = 'key.env'
 env_vars = dotenv_values(env_file_path)
 
+
+
+
 # Check if the key exists
 if 'API_KEY' not in env_vars or 'RAPID_API_KEY' not in env_vars or 'AMADEUS_API_KEY' not in env_vars or 'AMADEUS_API_SECRET' not in env_vars or 'PEXELS_API_KEY' not in env_vars:
     st.subheader("Please enter API keys")
