@@ -37,11 +37,11 @@ st.title("Tour Itinerary Generator")
 # env_vars = dotenv_values(env_file_path)
 
 
-API_KEY = st.secrets('API_KEY')
-RAPID_API_KEY = st.secrets("RAPID_API_KEY")
-AMADEUS_API_KEY = st.secrets("AMADEUS_API_KEY")
-AMADEUS_API_SECRET = st.secrets("AMADEUS_API_SECRET")
-PEXELS_API_KEY = st.secrets("PEXELS_API_KEY")
+API_KEY = st.secrets['API_KEY']
+RAPID_API_KEY = st.secrets["RAPID_API_KEY"]
+AMADEUS_API_KEY = st.secrets["AMADEUS_API_KEY"]
+AMADEUS_API_SECRET = st.secrets["AMADEUS_API_SECRET"]
+PEXELS_API_KEY = st.secrets["PEXELS_API_KEY"]
 
 # # Check if the key exists
 # if 'API_KEY' not in env_vars or 'RAPID_API_KEY' not in env_vars or 'AMADEUS_API_KEY' not in env_vars or 'AMADEUS_API_SECRET' not in env_vars or 'PEXELS_API_KEY' not in env_vars:
