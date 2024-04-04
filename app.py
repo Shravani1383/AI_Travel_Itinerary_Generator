@@ -18,6 +18,9 @@ from geopy.geocoders import Nominatim
 from openai import OpenAI
 from spire.doc import *
 from spire.doc.common import *
+from streamlit.logger import get_logger
+
+LOGGER = get_logger(__name__)
 
 RAPID_API_HOST = "booking-com.p.rapidapi.com"
 st.session_state['data_changed'] = False
@@ -702,34 +705,6 @@ def text_to_doc(itinerary, input_dict):
     return bytes_content
 
 
-# def merge_documents(front_page_file, folder_path, output_file):
-#     # Load the front page document
-#     dest_doc = Document()
-#     dest_doc.LoadFromFile(front_page_file)
-
-#     # List all files in the folder
-#     files_to_merge = os.listdir(folder_path)
-
-#     # Filter only the .docx files
-#     files_to_merge = [file for file in files_to_merge if file.endswith('.docx')]
-
-#     # Loop through the list
-#     for file in files_to_merge:
-#         # Construct the full file path
-#         file_path = os.path.join(folder_path, file)
-
-#         # Load the source document
-#         source_doc = Document()
-#         source_doc.LoadFromFile(file_path)
-
-#         # Import the content from the document into the destination document
-#         dest_doc.ImportContent(source_doc)
-
-#     # Save the result document
-#     dest_doc.SaveToFile(output_file, FileFormat.Docx2016)
-#     dest_doc.Close()
-#     source_doc.Close()
-
 def get_day_itinerary(itinerary, day_number):
     # Split the itinerary into days
     days = itinerary.split("Day ")
@@ -764,116 +739,68 @@ def generate_day_itineraries(itinerary):
             day_itineraries[day_number] = day_itinerary
     return day_itineraries
 
+def run():
 
-# def create_word_doc(city_dict, flight_info, input_dict):
-#     doc = Document()
+    if st.session_state.get('input_dict', False):
+        for key in input_dict.keys():
+            if input_dict[key] != st.session_state['input_dict'][key]:
+                st.session_state['data_changed'] = True
+                break
 
-#     # Add hotels information
-#     doc.add_heading('Hotels', level=1)
-#     for city, hotels in city_dict.items():
-#         doc.add_heading(city, level=2)
-#         for hotel in hotels:
-#             para = doc.add_paragraph()
-#             para.add_run(f"{hotel['hotel_name']}\n").bold = True
-#             para.add_run(f"Address: {hotel['address']}\n")
-#             try:
-#                 price = round(float(hotel['price']))
-#                 num_tourists = input_dict['num_adults'] + input_dict['num_children']
-#                 price_per_person = price // num_tourists
-#                 para.add_run(f"Price per day: {price_per_person} INR\n").italic = True
-#             except (ValueError, TypeError):
-#                 para.add_run("Price information is not available.\n").italic = True
-#             para.add_run(f"Rating: {hotel['rating']}\n")
-#             para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-#             doc.add_paragraph()  # Add an empty paragraph for spacing
-
-#     # Add flight details
-#     doc.add_heading('Flight Details', level=1)
-#     for city, flights in flight_info.items():
-#         doc.add_heading(city, level=2)
-#         for flight in flights:
-#             para = doc.add_paragraph()
-#             para.add_run(f"{flight['Airline']}\n").bold = True
-#             para.add_run(f"Departure Time: {flight['Departure Time']}\n")
-#             para.add_run(f"Arrival Time: {flight['Arrival Time']}\n")
-#             para.add_run(f"Price: {flight['Price']} INR\n").italic = True
-#             para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-#             doc.add_paragraph()  # Add an empty paragraph for spacing
-
-#     return doc
-
-if st.session_state.get('input_dict', False):
-    for key in input_dict.keys():
-        if input_dict[key] != st.session_state['input_dict'][key]:
-            st.session_state['data_changed'] = True
-            break
-
-if st.button("Generate Itinerary", type="primary"):
-    null_flag = False
-    if 'OPENAI_API_KEY' not in env_vars or 'X-RapidAPI-Key' not in env_vars or 'AMADEUS_API_KEY' not in env_vars or 'AMADEUS_API_SECRET' not in env_vars or 'PEXELS_API_KEY' not in env_vars:
-        st.warning('Enter all the API keys')
-        null_flag = True
-    for key in input_dict.keys():
-        if input_dict[key] is None:
-            st.warning(f'Please enter {key}!')
+    if st.button("Generate Itinerary", type="primary"):
+        null_flag = False
+        if 'OPENAI_API_KEY' not in env_vars or 'X-RapidAPI-Key' not in env_vars or 'AMADEUS_API_KEY' not in env_vars or 'AMADEUS_API_SECRET' not in env_vars or 'PEXELS_API_KEY' not in env_vars:
+            st.warning('Enter all the API keys')
             null_flag = True
-            break
+        for key in input_dict.keys():
+            if input_dict[key] is None:
+                st.warning(f'Please enter {key}!')
+                null_flag = True
+                break
 
-    if not null_flag:
+        if not null_flag:
+            generated_itinerary, city_dict, flight_info, days, city_string = generate_itinerary(input_dict)
+            st.session_state["cached_data_generated"] = True
+            st.session_state['data_changed'] = False
+            isGenerated = True
+
+    elif st.session_state.get("cached_data_generated", False) and not st.session_state['data_changed']:
         generated_itinerary, city_dict, flight_info, days, city_string = generate_itinerary(input_dict)
-        st.session_state["cached_data_generated"] = True
-        st.session_state['data_changed'] = False
-        isGenerated = True
 
-elif st.session_state.get("cached_data_generated", False) and not st.session_state['data_changed']:
-    generated_itinerary, city_dict, flight_info, days, city_string = generate_itinerary(input_dict)
+    if st.session_state.get("cached_data_generated", False) and not st.session_state['data_changed']:
+        st.subheader("Hotels")
+        for city, hotels in city_dict.items():
+            city_expander = st.expander(f"{city}")
+            with city_expander:
+                for hotel in hotels:
+                    st.write(f"- {hotel['hotel_name']}")
+                    st.write(f"  Address: {hotel['address']}")
+                    st.write(f"  Price per day: {hotel['price']} INR")
+                    st.write(f"  Rating: {hotel['rating']}")
+                    # Add more details as needed (amenities, images, etc.)
+                    st.write("---")  # Separator between hotels\
 
-if st.session_state.get("cached_data_generated", False) and not st.session_state['data_changed']:
-    st.subheader("Hotels")
-    for city, hotels in city_dict.items():
-        city_expander = st.expander(f"{city}")
-        with city_expander:
-            for hotel in hotels:
-                st.write(f"- {hotel['hotel_name']}")
-                st.write(f"  Address: {hotel['address']}")
-                st.write(f"  Price per day: {hotel['price']} INR")
-                st.write(f"  Rating: {hotel['rating']}")
-                # Add more details as needed (amenities, images, etc.)
-                st.write("---")  # Separator between hotels\
+        st.subheader("Flight Details")
+        for city, flights in flight_info.items():
+            city_expander = st.expander(f"{city}")
+            with city_expander:
+                for flight in flights:
+                    st.write(f"- {flight['Airline']}")
+                    st.write(f"  Departure Time: {flight['Departure Time']}")
+                    st.write(f"  Arrival Time: {flight['Arrival Time']}")
+                    st.write(f"  Price: {flight['Price']} INR")
+                    # Add more details as needed (amenities, images, etc.)
+                    st.write("---")
 
-    st.subheader("Flight Details")
-    for city, flights in flight_info.items():
-        city_expander = st.expander(f"{city}")
-        with city_expander:
-            for flight in flights:
-                st.write(f"- {flight['Airline']}")
-                st.write(f"  Departure Time: {flight['Departure Time']}")
-                st.write(f"  Arrival Time: {flight['Arrival Time']}")
-                st.write(f"  Price: {flight['Price']} INR")
-                # Add more details as needed (amenities, images, etc.)
-                st.write("---")
+        doc_io = text_to_doc(generated_itinerary, st.session_state['input_dict'])
 
-    doc_io = text_to_doc(generated_itinerary, st.session_state['input_dict'])
+        st.download_button(
+            label="Download Word Document",
+            data=doc_io,
+            file_name=f"{input_dict['dest']} Itinerary.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 
-    st.download_button(
-        label="Download Word Document",
-        data=doc_io,
-        file_name=f"{input_dict['dest']} Itinerary.docx",
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-
-    )
-
-    # doc = create_word_doc(city_dict, flight_info, input_dict) # flight & hotel info document
-
-    # Save the Word document to a file
-    # doc.save("travel_info.docx")
-
-    # Provide a download button for the saved document
-    # with open("travel_info.docx", "rb") as file:
-    #     file_contents = file.read()
-    # st.download_button(
-    #     label="Download Hotels and Flight info",
-    #     data=file_contents,
-    #     file_name=f"{input_dict['dest']} flight_hotel_info.docx",
-    #     mime="application/octet-stream",
-    # )
+        )
+if __name__ == "__main__":
+    run()
+        
