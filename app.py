@@ -20,7 +20,7 @@ from spire.doc import *
 from spire.doc.common import *
 from streamlit.logger import get_logger
 
-LOGGER = get_logger(__name__)
+
 
 RAPID_API_HOST = "booking-com.p.rapidapi.com"
 st.session_state['data_changed'] = False
@@ -739,7 +739,7 @@ def generate_day_itineraries(itinerary):
             day_itineraries[day_number] = day_itinerary
     return day_itineraries
 
-def run():
+
 
     if st.session_state.get('input_dict', False):
         for key in input_dict.keys():
@@ -801,6 +801,4 @@ def run():
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 
         )
-if __name__ == "__main__":
-    run()
-        
+
