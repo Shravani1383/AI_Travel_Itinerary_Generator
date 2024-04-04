@@ -1,3 +1,4 @@
+# https://shravani1383-ai-travel-itinerary-generator-app-rrzl0w.streamlit.app/
 import json
 import logging
 import math
@@ -31,38 +32,42 @@ st.set_page_config(
 )
 st.title("Tour Itinerary Generator")
 
-# Input fields for API keys
-env_file_path = 'key.env'
-env_vars = dotenv_values(env_file_path)
+# # Input fields for API keys
+# env_file_path = 'key.env'
+# env_vars = dotenv_values(env_file_path)
 
 
+API_KEY = st.secrets('API_KEY')
+RAPID_API_KEY = st.secrets("RAPID_API_KEY")
+AMADEUS_API_KEY = st.secrets("AMADEUS_API_KEY")
+AMADEUS_API_SECRET = st.secrets("AMADEUS_API_SECRET")
+PEXELS_API_KEY = st.secrets("PEXELS_API_KEY")
 
+# # Check if the key exists
+# if 'API_KEY' not in env_vars or 'RAPID_API_KEY' not in env_vars or 'AMADEUS_API_KEY' not in env_vars or 'AMADEUS_API_SECRET' not in env_vars or 'PEXELS_API_KEY' not in env_vars:
+#     st.subheader("Please enter API keys")
+#     API_KEY = st.text_input("Enter OpenAI API Key:")
+#     RAPID_API_KEY = st.text_input("Enter RapidAPI Key:")
+#     AMADEUS_API_KEY = st.text_input("Enter Amadeus client:")
+#     AMADEUS_API_SECRET = st.text_input("Enter Amadeus API secret:")
+#     PEXELS_API_KEY = st.text_input("Enter Pexels API key:")
+#     if st.button("Submit API Keys"):
+#         # Store the API keys in session state
+#         set_key(env_file_path, 'API_KEY', API_KEY)
+#         set_key(env_file_path, 'RAPID_API_KEY', RAPID_API_KEY)
+#         set_key(env_file_path, 'AMADEUS_API_KEY', AMADEUS_API_KEY)
+#         set_key(env_file_path, 'AMADEUS_API_SECRET', AMADEUS_API_SECRET)
+#         set_key(env_file_path, 'PEXELS_API_KEY', PEXELS_API_KEY)
 
-# Check if the key exists
-if 'API_KEY' not in env_vars or 'RAPID_API_KEY' not in env_vars or 'AMADEUS_API_KEY' not in env_vars or 'AMADEUS_API_SECRET' not in env_vars or 'PEXELS_API_KEY' not in env_vars:
-    st.subheader("Please enter API keys")
-    API_KEY = st.text_input("Enter OpenAI API Key:")
-    RAPID_API_KEY = st.text_input("Enter RapidAPI Key:")
-    AMADEUS_API_KEY = st.text_input("Enter Amadeus client:")
-    AMADEUS_API_SECRET = st.text_input("Enter Amadeus API secret:")
-    PEXELS_API_KEY = st.text_input("Enter Pexels API key:")
-    if st.button("Submit API Keys"):
-        # Store the API keys in session state
-        set_key(env_file_path, 'API_KEY', API_KEY)
-        set_key(env_file_path, 'RAPID_API_KEY', RAPID_API_KEY)
-        set_key(env_file_path, 'AMADEUS_API_KEY', AMADEUS_API_KEY)
-        set_key(env_file_path, 'AMADEUS_API_SECRET', AMADEUS_API_SECRET)
-        set_key(env_file_path, 'PEXELS_API_KEY', PEXELS_API_KEY)
+#         st.success("API Keys submitted successfully!")
 
-        st.success("API Keys submitted successfully!")
-
-else:
-    load_dotenv('key.env')
-    API_KEY = os.getenv('API_KEY')
-    RAPID_API_KEY = os.getenv("RAPID_API_KEY")
-    AMADEUS_API_KEY = os.getenv("AMADEUS_API_KEY")
-    AMADEUS_API_SECRET = os.getenv("AMADEUS_API_SECRET")
-    PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
+# else:
+#     load_dotenv('key.env')
+#     API_KEY = os.getenv('API_KEY')
+#     RAPID_API_KEY = os.getenv("RAPID_API_KEY")
+#     AMADEUS_API_KEY = os.getenv("AMADEUS_API_KEY")
+#     AMADEUS_API_SECRET = os.getenv("AMADEUS_API_SECRET")
+    # PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 
 col1, col2 = st.columns(2)
 
@@ -748,24 +753,24 @@ if st.session_state.get('input_dict', False):
             break
 
 if st.button("Generate Itinerary", type="primary"):
-    null_flag = False
-    if 'OPENAI_API_KEY' not in env_vars or 'X-RapidAPI-Key' not in env_vars or 'AMADEUS_API_KEY' not in env_vars or 'AMADEUS_API_SECRET' not in env_vars or 'PEXELS_API_KEY' not in env_vars:
-        st.warning('Enter all the API keys')
-        null_flag = True
-    for key in input_dict.keys():
-        if input_dict[key] is None:
-            st.warning(f'Please enter {key}!')
-            null_flag = True
-            break
+    # null_flag = False
+    # if 'OPENAI_API_KEY' not in env_vars or 'X-RapidAPI-Key' not in env_vars or 'AMADEUS_API_KEY' not in env_vars or 'AMADEUS_API_SECRET' not in env_vars or 'PEXELS_API_KEY' not in env_vars:
+    #     st.warning('Enter all the API keys')
+    #     null_flag = True
+    # for key in input_dict.keys():
+    #     if input_dict[key] is None:
+    #         st.warning(f'Please enter {key}!')
+    #         null_flag = True
+    #         break
 
-    if not null_flag:
-        generated_itinerary, city_dict, flight_info, days, city_string = generate_itinerary(input_dict)
-        st.session_state["cached_data_generated"] = True
-        st.session_state['data_changed'] = False
-        isGenerated = True
+    
+    generated_itinerary, city_dict, flight_info, days, city_string = generate_itinerary(input_dict)
+    st.session_state["cached_data_generated"] = True
+    st.session_state['data_changed'] = False
+    isGenerated = True
 
-    elif st.session_state.get("cached_data_generated", False) and not st.session_state['data_changed']:
-        generated_itinerary, city_dict, flight_info, days, city_string = generate_itinerary(input_dict)
+elif st.session_state.get("cached_data_generated", False) and not st.session_state['data_changed']:
+    generated_itinerary, city_dict, flight_info, days, city_string = generate_itinerary(input_dict)
 
 if st.session_state.get("cached_data_generated", False) and not st.session_state['data_changed']:
     st.subheader("Hotels")
