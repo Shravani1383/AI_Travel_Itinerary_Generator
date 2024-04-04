@@ -764,8 +764,8 @@ if st.button("Generate Itinerary", type="primary"):
         st.session_state['data_changed'] = False
         isGenerated = True
 
-elif st.session_state.get("cached_data_generated", False) and not st.session_state['data_changed']:
-    generated_itinerary, city_dict, flight_info, days, city_string = generate_itinerary(input_dict)
+    elif st.session_state.get("cached_data_generated", False) and not st.session_state['data_changed']:
+        generated_itinerary, city_dict, flight_info, days, city_string = generate_itinerary(input_dict)
 
 if st.session_state.get("cached_data_generated", False) and not st.session_state['data_changed']:
     st.subheader("Hotels")
