@@ -10,6 +10,7 @@ import streamlit as st
 import PIL.Image
 from amadeus import Client, ResponseError
 from docx import Document
+import docx
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.shared import Mm
 from docxtpl import DocxTemplate, InlineImage
@@ -67,7 +68,7 @@ PEXELS_API_KEY = st.secrets["PEXELS_API_KEY"]
 #     RAPID_API_KEY = os.getenv("RAPID_API_KEY")
 #     AMADEUS_API_KEY = os.getenv("AMADEUS_API_KEY")
 #     AMADEUS_API_SECRET = os.getenv("AMADEUS_API_SECRET")
-    # PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
+#     PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 
 col1, col2 = st.columns(2)
 
@@ -410,7 +411,7 @@ def generate_itinerary(input_dict):
         if len(split_line) == 2:
             day_number, location_name = split_line
             # Calling function to fetch image for location
-            fetch_image(day_number, location_name)
+            fetch_image(day_number, location_name,response)
         else:
             print(f"Invalid line format: {line}. Skipping.")
 
@@ -456,9 +457,10 @@ def extract_attractive_locations(response):
     return completion_text
 
 
-def fetch_image(day_number, location_name, width=600, height=400):
+def fetch_image(day_number, location_name,response, width=600, height=400):
     # Pexels API key (replace 'YOUR_API_KEY' with your actual Pexels API key)
-    api_key = PEXELS_API_KEY
+    api_key='aX1oVcA9l4t1zj7k221MvHWgxVYZME44eCKo3szkQj3cqGqMIbyRpgdL'
+    # api_key = PEXELS_API_KEY
     headers = {'Authorization': api_key}
 
     # Search query for location name
@@ -468,8 +470,8 @@ def fetch_image(day_number, location_name, width=600, height=400):
     url = f'https://api.pexels.com/v1/search?query={query}&per_page=1'
 
     # Making GET request to Pexels API
-    response = requests.get(url, headers=headers)
-    data = response.json()
+    response_image = requests.get(url, headers=headers)
+    data = response_image.json()
 
     # Check if response contains results
     if 'photos' in data and len(data['photos']) > 0:
@@ -496,6 +498,75 @@ def fetch_image(day_number, location_name, width=600, height=400):
         print(f"Image for {location_name} saved as {filename}")
     else:
         print(f"No image found for {location_name}")
+        prompt_for_new_location(day_number, location_name, response)
+
+
+def fetch_image_new_location(day_number, location_name,response, width=600, height=400):
+    # Pexels API key (replace 'YOUR_API_KEY' with your actual Pexels API key)
+    pexels_api_key = 'aX1oVcA9l4t1zj7k221MvHWgxVYZME44eCKo3szkQj3cqGqMIbyRpgdL'
+    headers = {'Authorization': pexels_api_key}
+
+    # Search query for location name
+    query = location_name
+
+    # Pexels API endpoint for photo search
+    pexels_url = f'https://api.pexels.com/v1/search?query={query}&per_page=1'
+
+    # Making GET request to Pexels API
+    pexels_response = requests.get(pexels_url, headers=headers)
+    pexels_data = pexels_response.json()
+
+    # Check if response contains results
+    if 'photos' in pexels_data and len(pexels_data['photos']) > 0:
+        image_url = pexels_data['photos'][0]['src']['large']
+
+        # Downloading image
+        image_data = requests.get(image_url).content
+
+        # Open image using Pillow
+        image = PIL.Image.open(BytesIO(image_data))
+
+        # Resize image to desired dimensions
+        image = image.resize((width, height))
+
+        # Create directory if it doesn't exist
+        directory = 'images'
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        # Saving image with filename in format 'day_number_location.jpg' inside 'images' directory
+        filename = f'{directory}/Day {day_number}.png'
+        image.save(filename, 'PNG')
+
+        print(f"Image for {location_name} saved as {filename}")
+    else:
+        # If no image found on Pexels, call function to generate another attractive location
+        # print(f"No image found for {location_name}. Generating another attractive location for day {day_number}...")
+        prompt_for_new_location(day_number, location_name, response)
+        
+
+def prompt_for_new_location(day_number, location_name, response):
+    prompt = f"there is no use for {location_name} so extract another new location for{day_number}from {response}" \
+             f"the name should not be same as the previous location it should be new and can be cuisine or anything that is attractive to see"\
+             f"provide only the location name in format Day Day number: new location name, do not provide whole response"\
+        # Generate the travel itinerary using the modified user message
+    new_location = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ],
+    )
+
+    # Get the completion text
+    completion_text = new_location.choices[0].message.content
+    print(completion_text)
+    # print(f"Generated new attractive location for day {day_number}: {completion_text}")
+    fetch_image_new_location(day_number, completion_text)
+    return completion_text
+      # Call fetch_image with the new location
 
 
 def fetch_and_save_banner_image(banner, width=600, height=400):
@@ -555,7 +626,12 @@ def delete_image_files(directory):
             except Exception as e:
                 print(f"Error deleting {file_path}: {e}")
 
-
+def remove_text(doc, text):
+#   text="Evaluation Warning: The document was created with Spire.Doc for Python"
+  for paragraph in doc.paragraphs:
+    for run in paragraph.runs:
+      if text in run.text:
+        run.text = run.text.replace(text, "")
 
 
 def text_to_doc(itinerary, input_dict):
@@ -668,10 +744,9 @@ def text_to_doc(itinerary, input_dict):
         file_path = os.path.join(folder_name, f'day_{day_number}_itinerary.docx')
         tpl.save(file_path)
 
+
     # Create a Document object
     destDoc = Document()
-    # # Load the destination document
-    # destDoc.LoadFromFile("mergeDocs/front_page.docx")
 
     # Define the folder path containing the files to merge
     folder_path = "generated_itineraries"
@@ -684,6 +759,7 @@ def text_to_doc(itinerary, input_dict):
 
     # Filter only the .docx files
     files_to_merge = [file for file in files_to_merge if file.endswith('.docx')]
+    files_to_merge.sort()
 
     # Loop through the list
     for file in files_to_merge:
@@ -701,7 +777,10 @@ def text_to_doc(itinerary, input_dict):
         destDoc.ImportContent(sourceDoc)
 
     # Save the result document
-    destDoc.SaveToFile("Itinerary.docx", FileFormat.Docx2016)
+    destDoc.SaveToFile("Itinerary1.docx", FileFormat.Docx2016)
+    doc = docx.Document("Itinerary1.docx")
+    remove_text(doc,"Evaluation Warning: The document was created with Spire.Doc for Python")
+    doc.save("Itinerary.docx")
     destDoc.Close()
     sourceDoc.Close()
 
@@ -806,4 +885,3 @@ if st.session_state.get("cached_data_generated", False) and not st.session_state
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 
     )
-
