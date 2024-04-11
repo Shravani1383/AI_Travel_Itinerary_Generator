@@ -633,6 +633,38 @@ def remove_text(doc, text):
       if text in run.text:
         run.text = run.text.replace(text, "")
 
+def extract_day_number(filename):
+    # If filename is 'cover_page.docx', return a very low number to prioritize it
+    if filename.lower() == 'cover_page.docx':
+        return float('-inf')
+    else:
+        # Split filename by underscores
+        parts = filename.split('_')
+        # Check if the filename has at least two parts
+        if len(parts) >= 2:
+            # Extract the second part
+            day_part = parts[1]
+            # Try to convert the day part to an integer
+            try:
+                day_number = int(day_part)
+            except ValueError:
+                # If conversion fails, return a large number
+                return float('inf')
+            else:
+                return day_number
+        else:
+            # If the filename does not have at least two parts, return a large number
+            return float('inf')
+
+# Function to extract the day number from the filename
+def extract_day_number(filename):
+    match = re.search(r'day_(\d+)_', filename)
+    if match:
+        return int(match.group(1))
+    elif 'cover_page' in filename:
+        return 0  # Assigning 0 for cover page to ensure it comes first
+    else:
+        return float('inf')
 
 def text_to_doc(itinerary, input_dict):
     day_itineraries = generate_day_itineraries(itinerary)
@@ -759,8 +791,8 @@ def text_to_doc(itinerary, input_dict):
 
     # Filter only the .docx files
     files_to_merge = [file for file in files_to_merge if file.endswith('.docx')]
-    files_to_merge.sort()
-
+    files_to_merge.sort(key=extract_day_number)
+    cover_page = None
     # Loop through the list
     for file in files_to_merge:
         # Construct the full file path
@@ -769,7 +801,10 @@ def text_to_doc(itinerary, input_dict):
         # Load the source document
         sourceDoc = Document()
         sourceDoc.LoadFromFile(file_path)
+        
 
+    # Add the cover page at the beginning if found   
+        
         # Keep the formatting of the source document when it is merged
         # sourceDoc.KeepSameFormat = True
 
