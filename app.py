@@ -22,8 +22,6 @@ from spire.doc import *
 from spire.doc.common import *
 from streamlit.logger import get_logger
 
-
-
 RAPID_API_HOST = "booking-com.p.rapidapi.com"
 st.session_state['data_changed'] = False
 input_dict = {}
@@ -33,18 +31,10 @@ st.set_page_config(
 )
 st.title("Tour Itinerary Generator")
 
-# # Input fields for API keys
-# env_file_path = 'key.env'
-# env_vars = dotenv_values(env_file_path)
+# Check if the key exists
+env_file_path = 'key.env'
+env_vars = dotenv_values(env_file_path)
 
-
-API_KEY = st.secrets['API_KEY']
-RAPID_API_KEY = st.secrets["RAPID_API_KEY"]
-AMADEUS_API_KEY = st.secrets["AMADEUS_API_KEY"]
-AMADEUS_API_SECRET = st.secrets["AMADEUS_API_SECRET"]
-PEXELS_API_KEY = st.secrets["PEXELS_API_KEY"]
-
-# # Check if the key exists
 # if 'API_KEY' not in env_vars or 'RAPID_API_KEY' not in env_vars or 'AMADEUS_API_KEY' not in env_vars or 'AMADEUS_API_SECRET' not in env_vars or 'PEXELS_API_KEY' not in env_vars:
 #     st.subheader("Please enter API keys")
 #     API_KEY = st.text_input("Enter OpenAI API Key:")
@@ -69,6 +59,12 @@ PEXELS_API_KEY = st.secrets["PEXELS_API_KEY"]
 #     AMADEUS_API_KEY = os.getenv("AMADEUS_API_KEY")
 #     AMADEUS_API_SECRET = os.getenv("AMADEUS_API_SECRET")
 #     PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
+
+API_KEY = st.secrets['API_KEY']
+RAPID_API_KEY = st.secrets["RAPID_API_KEY"]
+AMADEUS_API_KEY = st.secrets["AMADEUS_API_KEY"]
+AMADEUS_API_SECRET = st.secrets["AMADEUS_API_SECRET"]
+PEXELS_API_KEY = st.secrets["PEXELS_API_KEY"]
 
 col1, col2 = st.columns(2)
 
@@ -351,12 +347,13 @@ def generate_itinerary(input_dict):
     st.write(city_string)
     printables['city_string'] = city_string
 
-    for i in range(len(cities)):
-        # st.write(cities[i], dates[i], dates[i+1], input_dict['num_adults'], input_dict['num_children'])
-        all_city_dict.update(
-            get_hotel_data(cities[i], dates[i], dates[i + 1], input_dict['num_adults'], input_dict['num_children']))
+    # for i in range(len(cities)):
+    #     # st.write(cities[i], dates[i], dates[i+1], input_dict['num_adults'], input_dict['num_children'])
+    #     all_city_dict.update(
+    #        get_hotel_data(cities[i], dates[i], dates[i + 1], input_dict['num_adults'], input_dict['num_children']))
     input_dict['hotels_by_city'] = all_city_dict
 
+    st.write(input_dict)
     # Part 2: Actually generate the itinerary
     user_message = f"Design a detailed itinerary for a trip from {input_dict['src']} to {input_dict['dest']} starting from {input_dict['start_date']} and for " \
                    f"{input_dict['num_days']} days. The ordered list of cities is {cities} and of dates is {dates}. The budget for this trip is {input_dict['price_per_person']} INR per person. This trip is designed " \
@@ -373,6 +370,7 @@ def generate_itinerary(input_dict):
                    f"appealing. Keep the response descriptive and . Give a title to the itinerary(without including the word Title) but make sure you don't repeat location names in multiple days also you can mention prime locations in title that are going to be there in iternary. Do not suggest any activities " \
                    f"in the first city if the travel time and distance is more otherwise we can suggest activities." \
                    f"Finally the description for each day which should look like if a human is speaking(this paragraph will be under the heading for each day)" \
+                   f"Strictly follow the number of days. Generate an itinerary for {input_dict['num_days']} days." \
  \
         # Generate the travel itinerary using the modified user message
     chat_completion = client.chat.completions.create(
@@ -411,7 +409,7 @@ def generate_itinerary(input_dict):
         if len(split_line) == 2:
             day_number, location_name = split_line
             # Calling function to fetch image for location
-            fetch_image(day_number, location_name,response)
+            fetch_image(day_number, location_name, response)
         else:
             print(f"Invalid line format: {line}. Skipping.")
 
@@ -457,9 +455,9 @@ def extract_attractive_locations(response):
     return completion_text
 
 
-def fetch_image(day_number, location_name,response, width=600, height=400):
+def fetch_image(day_number, location_name, response, width=600, height=400):
     # Pexels API key (replace 'YOUR_API_KEY' with your actual Pexels API key)
-    api_key='aX1oVcA9l4t1zj7k221MvHWgxVYZME44eCKo3szkQj3cqGqMIbyRpgdL'
+    api_key = 'aX1oVcA9l4t1zj7k221MvHWgxVYZME44eCKo3szkQj3cqGqMIbyRpgdL'
     # api_key = PEXELS_API_KEY
     headers = {'Authorization': api_key}
 
@@ -501,7 +499,7 @@ def fetch_image(day_number, location_name,response, width=600, height=400):
         prompt_for_new_location(day_number, location_name, response)
 
 
-def fetch_image_new_location(day_number, location_name,response, width=600, height=400):
+def fetch_image_new_location(day_number, location_name, response, width=600, height=400):
     # Pexels API key (replace 'YOUR_API_KEY' with your actual Pexels API key)
     pexels_api_key = 'aX1oVcA9l4t1zj7k221MvHWgxVYZME44eCKo3szkQj3cqGqMIbyRpgdL'
     headers = {'Authorization': pexels_api_key}
@@ -543,12 +541,12 @@ def fetch_image_new_location(day_number, location_name,response, width=600, heig
         # If no image found on Pexels, call function to generate another attractive location
         # print(f"No image found for {location_name}. Generating another attractive location for day {day_number}...")
         prompt_for_new_location(day_number, location_name, response)
-        
+
 
 def prompt_for_new_location(day_number, location_name, response):
     prompt = f"there is no use for {location_name} so extract another new location for{day_number}from {response}" \
-             f"the name should not be same as the previous location it should be new and can be cuisine or anything that is attractive to see"\
-             f"provide only the location name in format Day Day number: new location name, do not provide whole response"\
+             f"the name should not be same as the previous location it should be new and can be cuisine or anything that is attractive to see" \
+             f"provide only the location name in format Day Day number: new location name, do not provide whole response" \
         # Generate the travel itinerary using the modified user message
     new_location = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -566,7 +564,7 @@ def prompt_for_new_location(day_number, location_name, response):
     # print(f"Generated new attractive location for day {day_number}: {completion_text}")
     fetch_image_new_location(day_number, completion_text)
     return completion_text
-      # Call fetch_image with the new location
+    # Call fetch_image with the new location
 
 
 def fetch_and_save_banner_image(banner, width=600, height=400):
@@ -626,12 +624,14 @@ def delete_image_files(directory):
             except Exception as e:
                 print(f"Error deleting {file_path}: {e}")
 
+
 def remove_text(doc, text):
-#   text="Evaluation Warning: The document was created with Spire.Doc for Python"
-  for paragraph in doc.paragraphs:
-    for run in paragraph.runs:
-      if text in run.text:
-        run.text = run.text.replace(text, "")
+    #   text="Evaluation Warning: The document was created with Spire.Doc for Python"
+    for paragraph in doc.paragraphs:
+        for run in paragraph.runs:
+            if text in run.text:
+                run.text = run.text.replace(text, "")
+
 
 def extract_day_number(filename):
     # If filename is 'cover_page.docx', return a very low number to prioritize it
@@ -656,6 +656,7 @@ def extract_day_number(filename):
             # If the filename does not have at least two parts, return a large number
             return float('inf')
 
+
 # Function to extract the day number from the filename
 def extract_day_number(filename):
     match = re.search(r'day_(\d+)_', filename)
@@ -665,6 +666,7 @@ def extract_day_number(filename):
         return 0  # Assigning 0 for cover page to ensure it comes first
     else:
         return float('inf')
+
 
 def text_to_doc(itinerary, input_dict):
     day_itineraries = generate_day_itineraries(itinerary)
@@ -716,10 +718,9 @@ def text_to_doc(itinerary, input_dict):
                 os.remove(file_path)
         except Exception as e:
             print(f"Error deleting {file_path}: {e}")
-   
 
     first_page = DocxTemplate('mergeDocs/front_page.docx')
-    
+
     # image_path = 'images/banner.png'
     context = {
         'tour_heading': itinerary.split('\n')[0],
@@ -741,8 +742,8 @@ def text_to_doc(itinerary, input_dict):
     for day_number, day_itinerary in day_itineraries.items():
         # Extract the first line of the itinerary
         first_line = day_itinerary.split('\n')[0]
-        print("Inside the text_to_doc func: ", day_itinerary, 'First line: ', first_line, 'Second line: ',
-              day_itinerary)
+        # print("Inside the text_to_doc func: ", day_itinerary, 'First line: ', first_line, 'Second line: ',
+        #       day_itinerary)
         # Join city names into a comma-separated string
         first_newline_index = day_itinerary.find('\n')
 
@@ -776,7 +777,6 @@ def text_to_doc(itinerary, input_dict):
         file_path = os.path.join(folder_name, f'day_{day_number}_itinerary.docx')
         tpl.save(file_path)
 
-
     # Create a Document object
     destDoc = Document()
 
@@ -801,10 +801,9 @@ def text_to_doc(itinerary, input_dict):
         # Load the source document
         sourceDoc = Document()
         sourceDoc.LoadFromFile(file_path)
-        
 
-    # Add the cover page at the beginning if found   
-        
+        # Add the cover page at the beginning if found
+
         # Keep the formatting of the source document when it is merged
         # sourceDoc.KeepSameFormat = True
 
@@ -814,7 +813,7 @@ def text_to_doc(itinerary, input_dict):
     # Save the result document
     destDoc.SaveToFile("Itinerary1.docx", FileFormat.Docx2016)
     doc = docx.Document("Itinerary1.docx")
-    remove_text(doc,"Evaluation Warning: The document was created with Spire.Doc for Python")
+    remove_text(doc, "Evaluation Warning: The document was created with Spire.Doc for Python")
     doc.save("Itinerary.docx")
     destDoc.Close()
     sourceDoc.Close()
@@ -824,10 +823,9 @@ def text_to_doc(itinerary, input_dict):
     return bytes_content
 
 
-def get_day_itinerary(itinerary, day_number):
-    # Split the itinerary into days
-    days = itinerary.split("Day ")
-    for day in days[1:]:
+def get_day_itinerary(days, day_number):
+
+    for day in days:
         # print(day)
         if day.startswith(str(day_number) + ":"):
             day = day.replace('*', '')
@@ -852,12 +850,28 @@ def generate_day_itineraries(itinerary):
         day_itineraries[day_number] = ""
 
     # Generate day itineraries for each day
+    def merge_strings_with_previous(lst):
+        merged_list = [""]
+        day_idx = 0
+        for item in lst:
+            if not item[0].isdigit():
+                tail = "Day " + item
+                merged_list[day_idx] += tail
+            else:
+                day_idx += 1
+                merged_list.append(item)
+
+        return merged_list
+
+    # Split the itinerary into days
+    days = itinerary.split("Day ")
+
+    days = merge_strings_with_previous(days)
     for day_number in range(1, max_day + 1):
-        day_itinerary = get_day_itinerary(itinerary, day_number)
+        day_itinerary = get_day_itinerary(days, day_number)
         if day_itinerary:
             day_itineraries[day_number] = day_itinerary
     return day_itineraries
-
 
 
 if st.session_state.get('input_dict', False):
@@ -877,7 +891,6 @@ if st.button("Generate Itinerary", type="primary"):
     #         null_flag = True
     #         break
 
-    
     generated_itinerary, city_dict, flight_info, days, city_string = generate_itinerary(input_dict)
     st.session_state["cached_data_generated"] = True
     st.session_state['data_changed'] = False
