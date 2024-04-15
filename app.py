@@ -347,13 +347,12 @@ def generate_itinerary(input_dict):
     st.write(city_string)
     printables['city_string'] = city_string
 
-    # for i in range(len(cities)):
-    #     # st.write(cities[i], dates[i], dates[i+1], input_dict['num_adults'], input_dict['num_children'])
-    #     all_city_dict.update(
-    #        get_hotel_data(cities[i], dates[i], dates[i + 1], input_dict['num_adults'], input_dict['num_children']))
+    for i in range(len(cities)):
+        # st.write(cities[i], dates[i], dates[i+1], input_dict['num_adults'], input_dict['num_children'])
+        all_city_dict.update(
+           get_hotel_data(cities[i], dates[i], dates[i + 1], input_dict['num_adults'], input_dict['num_children']))
     input_dict['hotels_by_city'] = all_city_dict
 
-    st.write(input_dict)
     # Part 2: Actually generate the itinerary
     user_message = f"Design a detailed itinerary for a trip from {input_dict['src']} to {input_dict['dest']} starting from {input_dict['start_date']} and for " \
                    f"{input_dict['num_days']} days. The ordered list of cities is {cities} and of dates is {dates}. The budget for this trip is {input_dict['price_per_person']} INR per person. This trip is designed " \
