@@ -21,6 +21,8 @@ from openai import OpenAI
 from spire.doc import *
 from spire.doc.common import *
 from streamlit.logger import get_logger
+import datetime
+from datetime import date
 
 RAPID_API_HOST = "booking-com.p.rapidapi.com"
 st.session_state['data_changed'] = False
@@ -75,12 +77,14 @@ input_dict['type_of_travelers'] = col1.text_input("Type of Travelers", key='type
 input_dict['mode_of_travel'] = col1.text_input("Mode of Travel", key='mode', placeholder='ex. flight, bus, train')
 input_dict['num_days'] = col2.number_input("Number of Days", key='num_days', min_value=0, max_value=None, value=0,
                                            step=1, format="%d")
-input_dict['start_date'] = col2.date_input("Start Date", key='start_date')
+current_date = datetime.date.today()
+
+input_dict['start_date'] = col2.date_input("Start Date", key='start_date', min_value=current_date)
 # Create sub-columns within col2
 col21, col22 = col2.columns(2)
 
 input_dict['num_adults'] = int(
-    col21.number_input("Number of Adults", key='num_adults', min_value=0, max_value=None, value=0, step=1, format="%d"))
+    col21.number_input("Number of Adults (18+)", key='num_adults', min_value=0, max_value=None, value=0, step=1, format="%d"))
 input_dict['num_children'] = int(
     col22.number_input("Number of Children", key='num_children', min_value=0, max_value=None, value=0, step=1,
                        format="%d"))
@@ -911,7 +915,7 @@ if st.session_state.get("cached_data_generated", False) and not st.session_state
                 # Add more details as needed (amenities, images, etc.)
                 st.write("---")  # Separator between hotels\
 
-    st.subheader("Flight Details")
+    # st.subheader("Flight Details")
     for city, flights in flight_info.items():
         city_expander = st.expander(f"{city}")
         with city_expander:
