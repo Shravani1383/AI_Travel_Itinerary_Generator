@@ -34,8 +34,8 @@ st.set_page_config(
 st.title("Tour Itinerary Generator")
 
 # Check if the key exists
-env_file_path = 'key.env'
-env_vars = dotenv_values(env_file_path)
+# env_file_path = 'key.env'
+# env_vars = dotenv_values(env_file_path)
 
 # if 'API_KEY' not in env_vars or 'RAPID_API_KEY' not in env_vars or 'AMADEUS_API_KEY' not in env_vars or 'AMADEUS_API_SECRET' not in env_vars or 'PEXELS_API_KEY' not in env_vars:
 #     st.subheader("Please enter API keys")
@@ -502,7 +502,7 @@ def fetch_image(day_number, location_name, response, width=600, height=400):
         prompt_for_new_location(day_number, location_name, response)
 
 
-def fetch_image_new_location(day_number, location_name, response, width=600, height=400):
+def fetch_image_new_location(day_number, location_name,response, width=600, height=400):
     # Pexels API key (replace 'YOUR_API_KEY' with your actual Pexels API key)
     pexels_api_key = 'aX1oVcA9l4t1zj7k221MvHWgxVYZME44eCKo3szkQj3cqGqMIbyRpgdL'
     headers = {'Authorization': pexels_api_key}
@@ -565,7 +565,7 @@ def prompt_for_new_location(day_number, location_name, response):
     completion_text = new_location.choices[0].message.content
     print(completion_text)
     # print(f"Generated new attractive location for day {day_number}: {completion_text}")
-    fetch_image_new_location(day_number, completion_text)
+    fetch_image_new_location(day_number, completion_text,response)
     return completion_text
     # Call fetch_image with the new location
 
