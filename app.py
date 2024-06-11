@@ -669,6 +669,8 @@ def extract_day_number(filename):
 
 
 def put_tables_in_doc():
+    st.write(input_dict_hotel)
+    st.write(input_dict_car)
     doc = Document()
     doc.LoadFromFile('mergeDocs/tablePage.docx')
     # Add a section
