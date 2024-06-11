@@ -21,8 +21,11 @@ from openai import OpenAI
 from spire.doc import *
 from spire.doc.common import *
 from streamlit.logger import get_logger
-import datetime
-from datetime import date
+from table import generate_word_document
+from tableCreateSpireDoc import generate_spire_document
+from docxcompose.composer import Composer
+from docx import Document as Document_compose
+import io
 
 RAPID_API_HOST = "booking-com.p.rapidapi.com"
 st.session_state['data_changed'] = False
@@ -34,33 +37,8 @@ st.set_page_config(
 st.title("Tour Itinerary Generator")
 
 # Check if the key exists
-# env_file_path = 'key.env'
-# env_vars = dotenv_values(env_file_path)
-
-# if 'API_KEY' not in env_vars or 'RAPID_API_KEY' not in env_vars or 'AMADEUS_API_KEY' not in env_vars or 'AMADEUS_API_SECRET' not in env_vars or 'PEXELS_API_KEY' not in env_vars:
-#     st.subheader("Please enter API keys")
-#     API_KEY = st.text_input("Enter OpenAI API Key:")
-#     RAPID_API_KEY = st.text_input("Enter RapidAPI Key:")
-#     AMADEUS_API_KEY = st.text_input("Enter Amadeus client:")
-#     AMADEUS_API_SECRET = st.text_input("Enter Amadeus API secret:")
-#     PEXELS_API_KEY = st.text_input("Enter Pexels API key:")
-#     if st.button("Submit API Keys"):
-#         # Store the API keys in session state
-#         set_key(env_file_path, 'API_KEY', API_KEY)
-#         set_key(env_file_path, 'RAPID_API_KEY', RAPID_API_KEY)
-#         set_key(env_file_path, 'AMADEUS_API_KEY', AMADEUS_API_KEY)
-#         set_key(env_file_path, 'AMADEUS_API_SECRET', AMADEUS_API_SECRET)
-#         set_key(env_file_path, 'PEXELS_API_KEY', PEXELS_API_KEY)
-
-#         st.success("API Keys submitted successfully!")
-
-# else:
-#     load_dotenv('key.env')
-#     API_KEY = os.getenv('API_KEY')
-#     RAPID_API_KEY = os.getenv("RAPID_API_KEY")
-#     AMADEUS_API_KEY = os.getenv("AMADEUS_API_KEY")
-#     AMADEUS_API_SECRET = os.getenv("AMADEUS_API_SECRET")
-#     PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
+env_file_path = 'key.env'
+env_vars = dotenv_values(env_file_path)
 
 API_KEY = st.secrets['API_KEY']
 RAPID_API_KEY = st.secrets["RAPID_API_KEY"]
@@ -70,28 +48,26 @@ PEXELS_API_KEY = st.secrets["PEXELS_API_KEY"]
 
 col1, col2 = st.columns(2)
 
-input_dict['dest'] = col1.text_input("Destination", key='dest')
-input_dict['src'] = col1.text_input("Source City", key='src')
-input_dict['genre'] = col1.text_input("Genre", key='genre')
+input_dict['dest'] = col1.text_input("Destination", key='dest',placeholder='ex. Himachal Pradesh')
+input_dict['src'] = col1.text_input("Source City", key='src',placeholder='ex. Mumbai')
+input_dict['genre'] = col1.text_input("Genre", key='genre',placeholder='ex. adventure, fun, religious')
 input_dict['type_of_travelers'] = col1.text_input("Type of Travelers", key='type', placeholder='ex. family, friends')
 input_dict['mode_of_travel'] = col1.text_input("Mode of Travel", key='mode', placeholder='ex. flight, bus, train')
 input_dict['num_days'] = col2.number_input("Number of Days", key='num_days', min_value=0, max_value=None, value=0,
                                            step=1, format="%d")
-current_date = datetime.date.today()
-input_dict['start_date'] = col2.date_input("Start Date", key='start_date', min_value=current_date)
+input_dict['start_date'] = col2.date_input("Start Date", key='start_date')
 # Create sub-columns within col2
 col21, col22 = col2.columns(2)
 
 input_dict['num_adults'] = int(
-    col21.number_input("Number of Adults (18+)", key='num_adults', min_value=0, max_value=None, value=0, step=1, format="%d"))
+    col21.number_input("Number of Adults", key='num_adults', min_value=0, max_value=None, value=0, step=1, format="%d"))
 input_dict['num_children'] = int(
     col22.number_input("Number of Children", key='num_children', min_value=0, max_value=None, value=0, step=1,
                        format="%d"))
-
-input_dict['price_per_person'] = col2.number_input("Price Per Person", key='price_per_person', min_value=0.0)
+input_dict['price_per_person'] = col2.number_input("Price Per Person", key='price_per_person', min_value=0)
 input_dict['average_age'] = col2.number_input("Average age", key='average_age', min_value=0, max_value=None, value=0,
                                               step=1, format="%d")
-input_dict['food'] = 'non veg' if st.toggle('Include non-veg hotels') else 'veg'
+# input_dict['food'] = 'non veg' if st.toggle('Include non-veg hotels') else 'veg'
 special_note = st.text_area("Special Note(Optional)", key='special_note')
 
 input_dict['num_tourists'] = input_dict['num_adults'] + input_dict['num_children']
@@ -357,25 +333,38 @@ def generate_itinerary(input_dict):
            get_hotel_data(cities[i], dates[i], dates[i + 1], input_dict['num_adults'], input_dict['num_children']))
     input_dict['hotels_by_city'] = all_city_dict
 
-    # Part 2: Actually generate the itinerary
-    user_message = f"Design a detailed itinerary for a trip from {input_dict['src']} to {input_dict['dest']} starting from {input_dict['start_date']} and for " \
-                   f"{input_dict['num_days']} days. The ordered list of cities is {cities} and of dates is {dates}. The budget for this trip is {input_dict['price_per_person']} INR per person. This trip is designed " \
-                   f"for {input_dict['num_tourists']} mainly with their {input_dict['type_of_travelers']} with an average age of {input_dict['average_age']}.The " \
-                   f"primary interests for activities are {input_dict['genre']}.The preferred mode(s) of travel include " \
-                   f"{input_dict['mode_of_travel']}.The group prefers {input_dict['food']} food. Please structure the itinerary with a detailed " \
-                   f"plan for each day along with a every day title and no word should get repeated in a title of other days, including activities, locations, weather according to the season they are " \
-                   f"travelling and estimated travel distances and times(Do not give null values if you cannot extract information). Write the travel time and distance in the day's subheading. " \
-                   f"Ensure to consider the preferences and " \
-                   f"interests of the group for each day's schedule. Important considerations: Factor in travel time " \
-                   f"between destinations. Suggest local transportation options. Include a mix of activities that cater" \
-                   f" to the group's interests. Also add distance of travel for each day and approx time(do not give null value sif not available) " \
-                   f"of travel. Also you can give a name for each day in the itinerary which will be more " \
-                   f"appealing. Keep the response descriptive and . Give a title to the itinerary(without including the word Title) but make sure you don't repeat location names in multiple days also you can mention prime locations in title that are going to be there in iternary. Do not suggest any activities " \
+    # # Part 2: Actually generate the itinerary
+    # user_message = f"Design a detailed itinerary for a trip from {input_dict['src']} to {input_dict['dest']} starting from {input_dict['start_date']} and for " \
+    #                f"{input_dict['num_days']} days. The ordered list of cities is {cities} and of dates is {dates}. The budget for this trip is {input_dict['price_per_person']} INR per person. This trip is designed " \
+    #                f"for {input_dict['num_tourists']} mainly with their {input_dict['type_of_travelers']} with an average age of {input_dict['average_age']}.The " \
+    #                f"primary interests for activities are {input_dict['genre']}.The preferred mode(s) of travel include " \
+    #                f"{input_dict['mode_of_travel']}.The group prefers {input_dict['food']} food. Please structure the itinerary with a detailed " \
+    #                f"plan for each day along with a every day title and no word should get repeated in a title of other days, including activities, locations, weather according to the season they are " \
+    #                f"travelling and estimated travel distances and times(Do not give null values if you cannot extract information). Write the travel time and distance in the day's subheading. " \
+    #                f"Ensure to consider the preferences and " \
+    #                f"interests of the group for each day's schedule. Important considerations: Factor in travel time " \
+    #                f"between destinations. Suggest local transportation options. Include a mix of activities that cater" \
+    #                f" to the group's interests. Also add distance of travel for each day and approx time(do not give null value sif not available) " \
+    #                f"of travel. Also you can give a name for each day in the itinerary which will be more " \
+    #                f"appealing. Keep the response descriptive and . Give a title to the itinerary(without including the word Title) but make sure you don't repeat location names in multiple days also you can mention prime locations in title that are going to be there in iternary. Do not suggest any activities " \
+    #                f"in the first city if the travel time and distance is more otherwise we can suggest activities." \
+    #                f"Finally the description for each day which should look like if a human is speaking(this paragraph will be under the heading for each day)" \
+    #                f"Strictly follow the number of days. Generate an itinerary for {input_dict['num_days']} days." \
+                   
+    user_message = f"Design a detailed {input_dict['num_days']}-day itinerary from {input_dict['src']} to {input_dict['dest']}, starting on {input_dict['start_date']}. " \
+                   f"The ordered list of cities is {cities} and of dates is {dates}.The group consists of {input_dict['num_tourists']} {input_dict['type_of_travelers']} with an average age of {input_dict['average_age']}." \
+                   f"Their primary interests are {input_dict['genre']} activities.The trip budget is {input_dict['price_per_person']} INR per person " \
+                   f"Travel will be by {input_dict['mode_of_travel']}, and local transportation options will be included." \
+                   f"Plan in detail for each day along with a every day title and no word should get repeated in a title of other days, including activities, group interests, locations, weather according to the season they are " \
+                   f"travelling and estimated travel distances and times(Do not give null values if you cannot extract information).Write the travel time and distance in the day's subheading. " \
+                   f"Also add distance of travel for each day and approx time(do not give null values if not available) of travel. " \
+                   f"Also you can give a name for each day in the itinerary which will be more " \
+                   f"appealing. Keep the response very descriptive explaining the plan for whole day(morning, afternoon, evening or anything according to you).Give a good and attractive short title to the whole itinerary(without including the word Title).Explain in such a way that a person in that group is explaing the planto other members. Do not suggest any activities " \
                    f"in the first city if the travel time and distance is more otherwise we can suggest activities." \
-                   f"Finally the description for each day which should look like if a human is speaking(this paragraph will be under the heading for each day)" \
-                   f"Strictly follow the number of days. Generate an itinerary for {input_dict['num_days']} days." \
- \
-        # Generate the travel itinerary using the modified user message
+                   f"Also consider {special_note} if given as input from the user."\
+                   f"Strictly follow the number of days and the itinerary language should be like if a travel agent is speaking to a person." \
+
+   # Generate the travel itinerary using the modified user message
     chat_completion = client.chat.completions.create(
         messages=[
             {
@@ -502,7 +491,7 @@ def fetch_image(day_number, location_name, response, width=600, height=400):
         prompt_for_new_location(day_number, location_name, response)
 
 
-def fetch_image_new_location(day_number, location_name,response, width=600, height=400):
+def fetch_image_new_location(day_number, location_name, response, width=600, height=400):
     # Pexels API key (replace 'YOUR_API_KEY' with your actual Pexels API key)
     pexels_api_key = 'aX1oVcA9l4t1zj7k221MvHWgxVYZME44eCKo3szkQj3cqGqMIbyRpgdL'
     headers = {'Authorization': pexels_api_key}
@@ -565,7 +554,7 @@ def prompt_for_new_location(day_number, location_name, response):
     completion_text = new_location.choices[0].message.content
     print(completion_text)
     # print(f"Generated new attractive location for day {day_number}: {completion_text}")
-    fetch_image_new_location(day_number, completion_text,response)
+    fetch_image_new_location(day_number, completion_text)
     return completion_text
     # Call fetch_image with the new location
 
@@ -679,39 +668,7 @@ def text_to_doc(itinerary, input_dict):
     # Create the directory if it doesn't exist
     if not os.path.exists(folder_name):
         os.makedirs(folder_name)
-
-    def create_and_save_table_document(input_dict):
-        # Create a new Document
-        document = Document()
-
-        # Add a table
-        table_data = [["Destination", "Hotel"]]
-        for city in input_dict['cities']:
-            table_data.append([city, ''])
-
-        table = document.add_table(rows=len(table_data), cols=2)
-
-        # adding data to table
-        for i, row_data in enumerate(table_data):
-            for j, cell_data in enumerate(row_data):
-                table.cell(i, j).text = cell_data
-
-        # Apply alignment to the table
-        for row in table.rows:
-            for cell in row.cells:
-                for paragraph in cell.paragraphs:
-                    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-
-        # Define a custom table style (optional)
-        table.style = 'Table Grid'
-
-        # Create the folder if it doesn't exist
-        if not os.path.exists("generated_itineraries"):
-            os.makedirs("generated_itineraries")
-
-        # Save the document
-        file_path = os.path.join("generated_itineraries", "z_table.docx")
-        document.save(file_path)
+       
 
     # Delete the previously generated documents
     for filename in os.listdir(folder_name):
@@ -722,7 +679,7 @@ def text_to_doc(itinerary, input_dict):
         except Exception as e:
             print(f"Error deleting {file_path}: {e}")
 
-    first_page = DocxTemplate('mergeDocs/front_page.docx')
+    first_page = DocxTemplate('mergeDocs/page1.docx')
 
     # image_path = 'images/banner.png'
     context = {
@@ -740,7 +697,7 @@ def text_to_doc(itinerary, input_dict):
     first_page.save(file_path)
 
     # Load the template document
-    tpl = DocxTemplate("mergeDocs/day_page.docx")
+    tpl = DocxTemplate("mergeDocs/page2.docx")
 
     for day_number, day_itinerary in day_itineraries.items():
         # Extract the first line of the itinerary
@@ -768,7 +725,7 @@ def text_to_doc(itinerary, input_dict):
             'day_itinerary': day_itinerary,
             'day_title': first_line,
             'day_image': InlineImage(
-                tpl, image_path, width=Mm(70), height=Mm(70))
+                tpl, image_path, width=Mm(100), height=Mm(80))
         }
 
         # Replace placeholders in the document
@@ -824,6 +781,22 @@ def text_to_doc(itinerary, input_dict):
     with open("Itinerary.docx", "rb") as file:
         bytes_content = file.read()
     return bytes_content
+
+def enter_details():
+    input_dict_hotel = {}
+    input_dict_car = {}
+    num_entries = st.number_input("Enter the number of entries:", min_value=1, step=1)
+
+    for i in range(num_entries):
+        city = st.text_input(f"City {i+1}")
+        hotel = st.text_input(f"Hotel for City {i+1}")
+        price = st.number_input(f"Price per Night for Hotel in City {i+1}")
+        car = st.text_input(f"Car for City {i+1}")
+        fare = st.number_input(f"Fare for Car in City {i+1}")
+        input_dict_hotel[city] = (hotel, price)
+        input_dict_car[city] = (car, fare)
+    
+    return input_dict_hotel, input_dict_car
 
 
 def get_day_itinerary(days, day_number):
@@ -908,14 +881,18 @@ if st.session_state.get("cached_data_generated", False) and not st.session_state
         city_expander = st.expander(f"{city}")
         with city_expander:
             for hotel in hotels:
+                price = round(float(hotel['price']))
+                num_tourists = input_dict['num_adults'] + input_dict['num_children']
+                price_per_person = price // num_tourists
+
                 st.write(f"- {hotel['hotel_name']}")
                 st.write(f"  Address: {hotel['address']}")
-                st.write(f"  Price per day: {hotel['price']} INR")
+                st.write(f"  Price per day: ₹ {price_per_person} ")
                 st.write(f"  Rating: {hotel['rating']}")
                 # Add more details as needed (amenities, images, etc.)
                 st.write("---")  # Separator between hotels\
 
-    # st.subheader("Flight Details")
+    st.subheader("Flight Details")
     for city, flights in flight_info.items():
         city_expander = st.expander(f"{city}")
         with city_expander:
@@ -923,16 +900,43 @@ if st.session_state.get("cached_data_generated", False) and not st.session_state
                 st.write(f"- {flight['Airline']}")
                 st.write(f"  Departure Time: {flight['Departure Time']}")
                 st.write(f"  Arrival Time: {flight['Arrival Time']}")
-                st.write(f"  Price: {flight['Price']} INR")
+                st.write(f"  Price: ₹ {flight['Price']}")
                 # Add more details as needed (amenities, images, etc.)
                 st.write("---")
 
-    doc_io = text_to_doc(generated_itinerary, st.session_state['input_dict'])
+    text_to_doc(generated_itinerary, st.session_state['input_dict'])
 
+    input_dict_hotel, input_dict_car = enter_details()
+    document = generate_spire_document(input_dict_hotel, input_dict_car)
+    document.save('dynamic_tables.docx')
+
+    master = Document_compose('Itinerary.docx')
+    composer = Composer(master)
+    doc2 = Document_compose('dynamic_tables.docx')
+    composer.append(doc2)
+    # Append doc3 (Accomodation)
+    doc3 = Document_compose('lastpage.docx')  # Provide the path to the third document
+    composer.append(doc3)
+    composer.save("combined.docx")
+
+    # st.download_button(
+    #     label="Download Word Document",
+    #     data='combined.docx',
+    #     file_name=f"{input_dict['dest']} Itinerary.docx",
+    #     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+
+    # )
+    # Convert the combined.docx file to bytes
+    with open("combined.docx", "rb") as file:
+        doc_bytes = file.read()
+
+    # Create a BytesIO object from the bytes
+    doc_io = io.BytesIO(doc_bytes)
+
+    # Display the download button with the BytesIO object
     st.download_button(
         label="Download Word Document",
         data=doc_io,
         file_name=f"{input_dict['dest']} Itinerary.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-
     )
