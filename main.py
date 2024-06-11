@@ -334,10 +334,10 @@ def generate_itinerary(input_dict):
     st.write(city_string)
     printables['city_string'] = city_string
 
-    for i in range(len(cities)):
-        # st.write(cities[i], dates[i], dates[i+1], input_dict['num_adults'], input_dict['num_children'])
-        all_city_dict.update(
-           get_hotel_data(cities[i], dates[i], dates[i + 1], input_dict['num_adults'], input_dict['num_children']))
+    # for i in range(len(cities)):
+    #     # st.write(cities[i], dates[i], dates[i+1], input_dict['num_adults'], input_dict['num_children'])
+    #     all_city_dict.update(
+    #        get_hotel_data(cities[i], dates[i], dates[i + 1], input_dict['num_adults'], input_dict['num_children']))
     input_dict['hotels_by_city'] = all_city_dict
 
     # # Part 2: Actually generate the itinerary
@@ -386,10 +386,10 @@ def generate_itinerary(input_dict):
     st.subheader("Itinerary")
     response = st.write_stream(chat_completion)
 
-    flight_data = flight_search(input_dict)
-
-    # Display flight information
-    flight_info = display_flight_info(flight_data)
+    # flight_data = flight_search(input_dict)
+    #
+    # # Display flight information
+    # flight_info = display_flight_info(flight_data)
     content = response
 
     # Split content into individual days
