@@ -21,7 +21,6 @@ from openai import OpenAI
 from spire.doc import *
 from spire.doc.common import *
 from streamlit.logger import get_logger
-from tableCreateSpireDoc import generate_spire_document
 from docxcompose.composer import Composer
 from docx import Document as Document_compose
 import io
@@ -34,10 +33,6 @@ st.set_page_config(
     page_icon="images/favicon.ico",  # Set path to your favicon image (.ico format)
 )
 st.title("Tour Itinerary Generator")
-
-# Check if the key exists
-env_file_path = 'key.env'
-env_vars = dotenv_values(env_file_path)
 
 API_KEY = st.secrets['API_KEY']
 RAPID_API_KEY = st.secrets["RAPID_API_KEY"]
@@ -67,6 +62,19 @@ input_dict['price_per_person'] = col2.number_input("Price Per Person", key='pric
 input_dict['average_age'] = col2.number_input("Average age", key='average_age', min_value=0, max_value=None, value=0,
                                               step=1, format="%d")
 # input_dict['food'] = 'non veg' if st.toggle('Include non-veg hotels') else 'veg'
+
+input_dict_hotel = []
+input_dict_car = []
+num_entries = st.number_input("Enter the number of entries:", min_value=1, step=1)
+
+for i in range(num_entries):
+    city = st.text_input(f"City {i+1}")
+    hotel = st.text_input(f"Hotel for City {i+1}")
+    price = st.number_input(f"Price per Night for Hotel in City {i+1}")
+    car = st.text_input(f"Car for City {i+1}")
+    fare = st.number_input(f"Fare for Car in City {i+1}")
+    input_dict_hotel[i] = {"city": city, "hotel": hotel, "price": price}
+    input_dict_car[i] = {"city": city, "car": car, "fare": fare}
 special_note = st.text_area("Special Note(Optional)", key='special_note')
 
 input_dict['num_tourists'] = input_dict['num_adults'] + input_dict['num_children']
@@ -326,10 +334,10 @@ def generate_itinerary(input_dict):
     st.write(city_string)
     printables['city_string'] = city_string
 
-    for i in range(len(cities)):
-        # st.write(cities[i], dates[i], dates[i+1], input_dict['num_adults'], input_dict['num_children'])
-        all_city_dict.update(
-           get_hotel_data(cities[i], dates[i], dates[i + 1], input_dict['num_adults'], input_dict['num_children']))
+    # for i in range(len(cities)):
+    #     # st.write(cities[i], dates[i], dates[i+1], input_dict['num_adults'], input_dict['num_children'])
+    #     all_city_dict.update(
+    #        get_hotel_data(cities[i], dates[i], dates[i + 1], input_dict['num_adults'], input_dict['num_children']))
     input_dict['hotels_by_city'] = all_city_dict
 
     # # Part 2: Actually generate the itinerary
@@ -378,10 +386,10 @@ def generate_itinerary(input_dict):
     st.subheader("Itinerary")
     response = st.write_stream(chat_completion)
 
-    flight_data = flight_search(input_dict)
-
-    # Display flight information
-    flight_info = display_flight_info(flight_data)
+    # flight_data = flight_search(input_dict)
+    #
+    # # Display flight information
+    # flight_info = display_flight_info(flight_data)
     content = response
 
     # Split content into individual days
@@ -659,15 +667,86 @@ def extract_day_number(filename):
         return float('inf')
 
 
+def put_tables_in_doc():
+    doc = Document()
+    doc.LoadFromFile('mergeDocs/tablePage.docx')
+    # Add a section
+    section = doc.Sections[0]
+    separator_paragraph = section.AddParagraph()
+    separator_paragraph.AppendText("Acommodation Details")
+    # Create a table
+    table = Table(doc, True)
+
+    # Set the width of table
+    table.PreferredWidth = PreferredWidth(WidthType.Percentage, int(100))
+
+    # Set the border of table
+    table.TableFormat.Borders.BorderType = BorderStyle.Single
+    table.TableFormat.Borders.Color = Color.get_Black()
+    row = table.AddRow(False, len(input_dict_hotel[0].keys()))
+    row.Height = 20.0
+    for i, col in enumerate(input_dict_hotel[0].keys()):
+        cell = row.Cells[i]
+        cell.CellFormat.VerticalAlignment = VerticalAlignment.Middle
+        paragraph = cell.AddParagraph()
+        paragraph.Format.HorizontalAlignment = HorizontalAlignment.Center
+        paragraph.AppendText(col)
+
+    for rowData in input_dict_hotel:
+        row = table.AddRow(False, len(rowData.keys()))
+        row.Height = 20.0
+        for i, col in enumerate(rowData.values()):
+            cell = row.Cells[i]
+            cell.CellFormat.VerticalAlignment = VerticalAlignment.Middle
+            paragraph = cell.AddParagraph()
+            paragraph.Format.HorizontalAlignment = HorizontalAlignment.Center
+            paragraph.AppendText(col)
+
+    # Add the table to the section
+    section.Tables.Add(table)
+
+    separator_paragraph = section.AddParagraph()
+    separator_paragraph.AppendText("\nLocal Transport Details")
+
+    table = Table(doc, True)
+
+    # Set the width of table
+    table.PreferredWidth = PreferredWidth(WidthType.Percentage, int(100))
+
+    # Set the border of table
+    table.TableFormat.Borders.BorderType = BorderStyle.Single
+    table.TableFormat.Borders.Color = Color.get_Black()
+
+    row = table.AddRow(False, len(input_dict_car[0].keys()))
+    row.Height = 20.0
+    for i, col in enumerate(input_dict_car[0].keys()):
+        cell = row.Cells[i]
+        cell.CellFormat.VerticalAlignment = VerticalAlignment.Middle
+        paragraph = cell.AddParagraph()
+        paragraph.Format.HorizontalAlignment = HorizontalAlignment.Center
+        paragraph.AppendText(col)
+
+    for rowData in input_dict_car:
+        row = table.AddRow(False, len(rowData.keys()))
+        row.Height = 20.0
+        for i, col in enumerate(rowData.values()):
+            cell = row.Cells[i]
+            cell.CellFormat.VerticalAlignment = VerticalAlignment.Middle
+            paragraph = cell.AddParagraph()
+            paragraph.Format.HorizontalAlignment = HorizontalAlignment.Center
+            paragraph.AppendText(col)
+
+    # Add the table to the section
+    section.Tables.Add(table)
+
+    # Save the document
+    doc.SaveToFile("tableDoc.docx", FileFormat.Docx2019)
+    doc.Close()
+
 def text_to_doc(itinerary, input_dict):
     day_itineraries = generate_day_itineraries(itinerary)
     city_names = ", ".join(input_dict['cities'])
     folder_name = "generated_itineraries"
-    fetch_and_save_banner_image(itinerary.split('\n')[0])
-    # Create the directory if it doesn't exist
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-       
 
     # Delete the previously generated documents
     for filename in os.listdir(folder_name):
@@ -678,31 +757,25 @@ def text_to_doc(itinerary, input_dict):
         except Exception as e:
             print(f"Error deleting {file_path}: {e}")
 
-    first_page = DocxTemplate('mergeDocs/page1.docx')
-
-    # image_path = 'images/banner.png'
+    first_page = DocxTemplate('mergeDocs/front_page.docx')
     context = {
         'tour_heading': itinerary.split('\n')[0],
         'num_days': input_dict['num_days'],
         'budget': input_dict['price_per_person'],
         'cities': city_names,
-        # 'day_image': InlineImage(
-        #     first_page, image_path, width=Mm(70), height=Mm(70))
     }
     first_page.render(context)
-    # first_page.replace_media('mergeDocs/front_img.png', 'images/banner.png')
-
     file_path = os.path.join(folder_name, 'cover_page.docx')
     first_page.save(file_path)
 
     # Load the template document
-    tpl = DocxTemplate("mergeDocs/page2.docx")
+    tpl = DocxTemplate("mergeDocs/daywise_itinerary.docx")
 
     for day_number, day_itinerary in day_itineraries.items():
         # Extract the first line of the itinerary
         first_line = day_itinerary.split('\n')[0]
-        # print("Inside the text_to_doc func: ", day_itinerary, 'First line: ', first_line, 'Second line: ',
-        #       day_itinerary)
+        print("Inside the text_to_doc func: ", day_itinerary, 'First line: ', first_line, 'Second line: ',
+              day_itinerary)
         # Join city names into a comma-separated string
         first_newline_index = day_itinerary.find('\n')
 
@@ -711,24 +784,18 @@ def text_to_doc(itinerary, input_dict):
             # Extract the substring starting from the index after the first '\n'
             day_itinerary = day_itinerary[first_newline_index + 1:]
 
-        # Extract the image file path based on the day_number
-        image_folder = "images"
-        image_file = f"Day {day_number}.png"
-        image_path = os.path.join(image_folder, image_file)
-
         # Define the context dictionary
         context = {
             'tour_heading': first_line,
             'num_days': input_dict['num_days'],
             'budget': input_dict['price_per_person'],
             'day_itinerary': day_itinerary,
-            'day_title': first_line,
-            'day_image': InlineImage(
-                tpl, image_path, width=Mm(100), height=Mm(80))
+            'day_title': first_line
         }
 
         # Replace placeholders in the document
         tpl.render(context)
+        # Create a folder to store the generated documents
 
         os.makedirs(folder_name, exist_ok=True)
 
@@ -738,6 +805,8 @@ def text_to_doc(itinerary, input_dict):
 
     # Create a Document object
     destDoc = Document()
+    # # Load the destination document
+    # destDoc.LoadFromFile("mergeDocs/front_page.docx")
 
     # Define the folder path containing the files to merge
     folder_path = "generated_itineraries"
@@ -750,8 +819,7 @@ def text_to_doc(itinerary, input_dict):
 
     # Filter only the .docx files
     files_to_merge = [file for file in files_to_merge if file.endswith('.docx')]
-    files_to_merge.sort(key=extract_day_number)
-    cover_page = None
+
     # Loop through the list
     for file in files_to_merge:
         # Construct the full file path
@@ -761,20 +829,24 @@ def text_to_doc(itinerary, input_dict):
         sourceDoc = Document()
         sourceDoc.LoadFromFile(file_path)
 
-        # Add the cover page at the beginning if found
-
         # Keep the formatting of the source document when it is merged
         # sourceDoc.KeepSameFormat = True
 
         # Import the content from the document into the destination document
         destDoc.ImportContent(sourceDoc)
 
+    put_tables_in_doc()
+    table_doc = "tableDoc.docx"
+    sourceDoc = Document()
+    sourceDoc.LoadFromFile(table_doc)
+    destDoc.ImportContent(sourceDoc)
     # Save the result document
     destDoc.SaveToFile("Itinerary1.docx", FileFormat.Docx2016)
     doc = docx.Document("Itinerary1.docx")
     remove_text(doc, "Evaluation Warning: The document was created with Spire.Doc for Python")
     doc.save("Itinerary.docx")
     destDoc.Close()
+
     sourceDoc.Close()
 
     with open("Itinerary.docx", "rb") as file:
@@ -903,36 +975,8 @@ if st.session_state.get("cached_data_generated", False) and not st.session_state
                 # Add more details as needed (amenities, images, etc.)
                 st.write("---")
 
-    text_to_doc(generated_itinerary, st.session_state['input_dict'])
+    doc_io = text_to_doc(generated_itinerary, st.session_state['input_dict'])
 
-    input_dict_hotel, input_dict_car = enter_details()
-    document = generate_spire_document(input_dict_hotel, input_dict_car)
-    document.save('dynamic_tables.docx')
-
-    master = Document_compose('Itinerary.docx')
-    composer = Composer(master)
-    doc2 = Document_compose('dynamic_tables.docx')
-    composer.append(doc2)
-    # Append doc3 (Accomodation)
-    doc3 = Document_compose('lastpage.docx')  # Provide the path to the third document
-    composer.append(doc3)
-    composer.save("combined.docx")
-
-    # st.download_button(
-    #     label="Download Word Document",
-    #     data='combined.docx',
-    #     file_name=f"{input_dict['dest']} Itinerary.docx",
-    #     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-
-    # )
-    # Convert the combined.docx file to bytes
-    with open("combined.docx", "rb") as file:
-        doc_bytes = file.read()
-
-    # Create a BytesIO object from the bytes
-    doc_io = io.BytesIO(doc_bytes)
-
-    # Display the download button with the BytesIO object
     st.download_button(
         label="Download Word Document",
         data=doc_io,
