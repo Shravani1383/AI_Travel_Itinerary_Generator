@@ -73,8 +73,8 @@ for i in range(num_entries):
     price = st.number_input(f"Price per Night for Hotel in City {i+1}")
     car = st.text_input(f"Car for City {i+1}")
     fare = st.number_input(f"Fare for Car in City {i+1}")
-    input_dict_hotel.append({"city": city, "hotel": hotel, "price": price})
-    input_dict_car.append({"city": city, "car": car, "fare": fare})
+    input_dict_hotel.append({"City": city, "Hotel": hotel, "Price": price})
+    input_dict_car.append({"City": city, "Car": car, "Fare": fare})
 special_note = st.text_area("Special Note(Optional)", key='special_note')
 
 input_dict['num_tourists'] = input_dict['num_adults'] + input_dict['num_children']
@@ -886,8 +886,14 @@ def text_to_doc(itinerary, input_dict):
     sourceDoc = Document()
     sourceDoc.LoadFromFile(table_doc)
     destDoc.ImportContent(sourceDoc)
+
+    inc_exc_doc = "mergeDocs/inclusion_exclusion.docx"
+    sourceDoc = Document()
+    sourceDoc.LoadFromFile(inc_exc_doc)
+    destDoc.ImportContent(sourceDoc)
+    
     # Save the result document
-    destDoc.SaveToFile("Itinerary1.docx", FileFormat.Docx2016)
+    destDoc.SaveToFile("Itinerary1.docx", FileFormat.Docx2019)
     doc = docx.Document("Itinerary1.docx")
     remove_text(doc, "Evaluation Warning: The document was created with Spire.Doc for Python")
     doc.save("Itinerary.docx")
