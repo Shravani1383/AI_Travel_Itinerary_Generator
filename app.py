@@ -766,7 +766,7 @@ def text_to_doc(itinerary, input_dict):
         except Exception as e:
             print(f"Error deleting {file_path}: {e}")
 
-    first_page = DocxTemplate('mergeDocs/front_page.docx')
+    first_page = DocxTemplate('mergeDocs/page1.docx')
     context = {
         'tour_heading': itinerary.split('\n')[0],
         'num_days': input_dict['num_days'],
@@ -778,7 +778,7 @@ def text_to_doc(itinerary, input_dict):
     first_page.save(file_path)
 
     # Load the template document
-    tpl = DocxTemplate("mergeDocs/daywise_itinerary.docx")
+    tpl = DocxTemplate("mergeDocs/page2.docx")
 
     for day_number, day_itinerary in day_itineraries.items():
         # Extract the first line of the itinerary
