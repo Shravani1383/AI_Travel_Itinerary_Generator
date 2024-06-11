@@ -701,6 +701,7 @@ def put_tables_in_doc():
         for i, col in enumerate(rowData.values()):
             if type(col) == float:
                 col = (int)(col)
+                col = (str)(col)
             cell = row.Cells[i]
             cell.CellFormat.VerticalAlignment = VerticalAlignment.Middle
             paragraph = cell.AddParagraph()
@@ -737,6 +738,7 @@ def put_tables_in_doc():
         for i, col in enumerate(rowData.values()):
             if type(col) == float:
                 col = (int)(col)
+                col = (str)(col)
             cell = row.Cells[i]
             cell.CellFormat.VerticalAlignment = VerticalAlignment.Middle
             paragraph = cell.AddParagraph()
