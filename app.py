@@ -21,7 +21,6 @@ from openai import OpenAI
 from spire.doc import *
 from spire.doc.common import *
 from streamlit.logger import get_logger
-from table import generate_word_document
 from tableCreateSpireDoc import generate_spire_document
 from docxcompose.composer import Composer
 from docx import Document as Document_compose
