@@ -669,13 +669,39 @@ def extract_day_number(filename):
 
 
 def put_tables_in_doc():
-    # st.write(input_dict_hotel)
-    # st.write(input_dict_car)
     doc = Document()
     doc.LoadFromFile('mergeDocs/tablePage.docx')
+
+    style = ParagraphStyle(doc)
+    style.Name = 'Cells'
+    style.CharacterFormat.Bold = False
+    style.CharacterFormat.Italic = False
+    style.CharacterFormat.TextColor = Color.get_Black()
+    style.CharacterFormat.FontName = 'Calibri (Body)'
+    style.CharacterFormat.FontSize = 12
+    doc.Styles.Add(style)
+
+    style = ParagraphStyle(doc)
+    style.Name = 'HeaderRow'
+    style.CharacterFormat.Bold = True
+    style.CharacterFormat.Italic = False
+    style.CharacterFormat.TextColor = Color.get_Black()
+    style.CharacterFormat.FontName = 'Calibri (Body)'
+    style.CharacterFormat.FontSize = 14
+    doc.Styles.Add(style)
+
+    style = ParagraphStyle(doc)
+    style.Name = 'TableHeading'
+    style.CharacterFormat.Bold = True
+    style.CharacterFormat.Italic = False
+    style.CharacterFormat.TextColor = Color.get_Black()
+    style.CharacterFormat.FontName = 'Calibri (Body)'
+    style.CharacterFormat.FontSize = 16
+    doc.Styles.Add(style)
     # Add a section
     section = doc.Sections[0]
     separator_paragraph = section.AddParagraph()
+    separator_paragraph.ApplyStyle('TableHeading')
     separator_paragraph.AppendText("Acommodation Details")
     # Create a table
     table = Table(doc, True)
@@ -693,25 +719,25 @@ def put_tables_in_doc():
         cell.CellFormat.VerticalAlignment = VerticalAlignment.Middle
         paragraph = cell.AddParagraph()
         paragraph.Format.HorizontalAlignment = HorizontalAlignment.Center
+        paragraph.ApplyStyle('HeaderRow')
         paragraph.AppendText(col)
 
     for rowData in input_dict_hotel:
         row = table.AddRow(False, len(rowData.keys()))
         row.Height = 20.0
         for i, col in enumerate(rowData.values()):
-            if type(col) == float:
-                col = (int)(col)
-                col = (str)(col)
             cell = row.Cells[i]
             cell.CellFormat.VerticalAlignment = VerticalAlignment.Middle
             paragraph = cell.AddParagraph()
             paragraph.Format.HorizontalAlignment = HorizontalAlignment.Center
+            paragraph.ApplyStyle('Cells')
             paragraph.AppendText(col)
 
     # Add the table to the section
     section.Tables.Add(table)
 
     separator_paragraph = section.AddParagraph()
+    separator_paragraph.ApplyStyle('TableHeading')
     separator_paragraph.AppendText("\nLocal Transport Details")
 
     table = Table(doc, True)
@@ -730,19 +756,18 @@ def put_tables_in_doc():
         cell.CellFormat.VerticalAlignment = VerticalAlignment.Middle
         paragraph = cell.AddParagraph()
         paragraph.Format.HorizontalAlignment = HorizontalAlignment.Center
+        paragraph.ApplyStyle('HeaderRow')
         paragraph.AppendText(col)
 
     for rowData in input_dict_car:
         row = table.AddRow(False, len(rowData.keys()))
         row.Height = 20.0
         for i, col in enumerate(rowData.values()):
-            if type(col) == float:
-                col = (int)(col)
-                col = (str)(col)
             cell = row.Cells[i]
             cell.CellFormat.VerticalAlignment = VerticalAlignment.Middle
             paragraph = cell.AddParagraph()
             paragraph.Format.HorizontalAlignment = HorizontalAlignment.Center
+            paragraph.ApplyStyle('Cells')
             paragraph.AppendText(col)
 
     # Add the table to the section
@@ -751,6 +776,7 @@ def put_tables_in_doc():
     # Save the document
     doc.SaveToFile("tableDoc.docx", FileFormat.Docx2019)
     doc.Close()
+
 
 def text_to_doc(itinerary, input_dict):
     day_itineraries = generate_day_itineraries(itinerary)
@@ -793,13 +819,18 @@ def text_to_doc(itinerary, input_dict):
             # Extract the substring starting from the index after the first '\n'
             day_itinerary = day_itinerary[first_newline_index + 1:]
 
+        image_folder = "images"
+        image_file = f"Day {day_number}.png"
+        image_path = os.path.join(image_folder, image_file)
         # Define the context dictionary
         context = {
             'tour_heading': first_line,
             'num_days': input_dict['num_days'],
             'budget': input_dict['price_per_person'],
             'day_itinerary': day_itinerary,
-            'day_title': first_line
+            'day_title': first_line,
+            'day_image': InlineImage(
+                tpl, image_path, width=Mm(100), height=Mm(80))
         }
 
         # Replace placeholders in the document
