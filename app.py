@@ -390,6 +390,7 @@ def generate_itinerary(input_dict):
     #
     # # Display flight information
     # flight_info = display_flight_info(flight_data)
+    flight_info = []
     content = response
 
     # Split content into individual days
