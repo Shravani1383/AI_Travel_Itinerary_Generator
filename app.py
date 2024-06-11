@@ -73,8 +73,8 @@ for i in range(num_entries):
     price = st.number_input(f"Price per Night for Hotel in City {i+1}")
     car = st.text_input(f"Car for City {i+1}")
     fare = st.number_input(f"Fare for Car in City {i+1}")
-    input_dict_hotel[i] = {"city": city, "hotel": hotel, "price": price}
-    input_dict_car[i] = {"city": city, "car": car, "fare": fare}
+    input_dict_hotel.append({"city": city, "hotel": hotel, "price": price})
+    input_dict_car.append({"city": city, "car": car, "fare": fare})
 special_note = st.text_area("Special Note(Optional)", key='special_note')
 
 input_dict['num_tourists'] = input_dict['num_adults'] + input_dict['num_children']
