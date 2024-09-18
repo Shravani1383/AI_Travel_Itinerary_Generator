@@ -38,8 +38,9 @@ API_KEY = st.secrets['API_KEY']
 RAPID_API_KEY = st.secrets["RAPID_API_KEY"]
 AMADEUS_API_KEY = st.secrets["AMADEUS_API_KEY"]
 AMADEUS_API_SECRET = st.secrets["AMADEUS_API_SECRET"]
-PEXELS_API_KEY = st.secrets["PEXELS_API_KEY"]
-
+pexels_api_key = st.secrets["PEXELS_API_KEY"]
+pixabay_api_key = st.secrets["PIXABAY_API_KEY"]
+unsplash_access_key = st.secrets["UNSPLASH_ACCESS_KEY"]
 col1, col2 = st.columns(2)
 
 input_dict['dest'] = col1.text_input("Destination", key='dest',placeholder='ex. Himachal Pradesh')
@@ -358,7 +359,7 @@ def generate_itinerary(input_dict):
     #                f"Finally the description for each day which should look like if a human is speaking(this paragraph will be under the heading for each day)" \
     #                f"Strictly follow the number of days. Generate an itinerary for {input_dict['num_days']} days." \
                    
-    user_message = f"Design a detailed {input_dict['num_days']}-day itinerary from {input_dict['src']} to {input_dict['dest']}, starting on {input_dict['start_date']}. " \
+    user_message = f"Design a detailed {input_dict['num_days']}-day itinerary (each day's content strictly less than 100 words) from {input_dict['src']} to {input_dict['dest']}, starting on {input_dict['start_date']}. " \
                    f"The ordered list of cities is {cities} and of dates is {dates}.The group consists of {input_dict['num_tourists']} {input_dict['type_of_travelers']} with an average age of {input_dict['average_age']}." \
                    f"Their primary interests are {input_dict['genre']} activities.The trip budget is {input_dict['price_per_person']} INR per person " \
                    f"Travel will be by {input_dict['mode_of_travel']}, and local transportation options will be included." \
@@ -456,91 +457,145 @@ def extract_attractive_locations(response):
 
 
 def fetch_image(day_number, location_name, response, width=600, height=400):
-    # Pexels API key (replace 'YOUR_API_KEY' with your actual Pexels API key)
-    api_key = 'aX1oVcA9l4t1zj7k221MvHWgxVYZME44eCKo3szkQj3cqGqMIbyRpgdL'
-    # api_key = PEXELS_API_KEY
-    headers = {'Authorization': api_key}
+    
 
     # Search query for location name
     query = location_name
+    image_url = None
 
-    # Pexels API endpoint for photo search
-    url = f'https://api.pexels.com/v1/search?query={query}&per_page=1'
+    # Step 1: Try fetching from Pixabay
+    pixabay_url = f'https://pixabay.com/api/?key={pixabay_api_key}&q={query}&image_type=photo&category=travel'
+    pixabay_response = requests.get(pixabay_url)
+    pixabay_data = pixabay_response.json()
 
-    # Making GET request to Pexels API
-    response_image = requests.get(url, headers=headers)
-    data = response_image.json()
-
-    # Check if response contains results
-    if 'photos' in data and len(data['photos']) > 0:
-        image_url = data['photos'][0]['src']['large']
-
-        # Downloading image
-        image_data = requests.get(image_url).content
-
-        # Open image using Pillow
-        image = PIL.Image.open(BytesIO(image_data))
-
-        # Resize image to desired dimensions
-        image = image.resize((width, height))
-
-        # Create directory if it doesn't exist
-        directory = 'images'
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        # Saving image with filename in format 'day_number_location.jpg' inside 'images' directory
-        filename = f'{directory}/{day_number}.png'
-        image.save(filename, 'PNG')
-
-        print(f"Image for {location_name} saved as {filename}")
+    # Check if Pixabay returns any results
+    if 'hits' in pixabay_data and len(pixabay_data['hits']) > 0:
+        image_url = pixabay_data['hits'][0]['largeImageURL']
+        print(f"Image found on Pixabay for {location_name}")
     else:
-        print(f"No image found for {location_name}")
-        prompt_for_new_location(day_number, location_name, response)
+        print(f"No image found on Pixabay for {location_name}, trying Pexels...")
+
+    # Step 2: Try fetching from Pexels if Pixabay fails
+    if not image_url:
+        pexels_url = f'https://api.pexels.com/v1/search?query={query}&per_page=1'
+        headers = {'Authorization': pexels_api_key}
+        pexels_response = requests.get(pexels_url, headers=headers)
+        pexels_data = pexels_response.json()
+
+        if 'photos' in pexels_data and len(pexels_data['photos']) > 0:
+            image_url = pexels_data['photos'][0]['src']['large']
+            print(f"Image found on Pexels for {location_name}")
+        else:
+            print(f"No image found on Pexels for {location_name}, trying Unsplash...")
+
+    # Step 3: Try fetching from Unsplash if Pexels fails
+    if not image_url:
+        unsplash_url = f'https://api.unsplash.com/search/photos?page=1&query={query}&per_page=1'
+        headers = {'Authorization': f'Client-ID {unsplash_access_key}'}
+        unsplash_response = requests.get(unsplash_url, headers=headers)
+        unsplash_data = unsplash_response.json()
+
+        if 'results' in unsplash_data and len(unsplash_data['results']) > 0:
+            image_url = unsplash_data['results'][0]['urls']['regular']
+            print(f"Image found on Unsplash for {location_name}")
+        else:
+            print(f"No image found for {location_name} on Pixabay, Pexels, or Unsplash.")
+            prompt_for_new_location(day_number, location_name, response)
+            return  
+    # Downloading image
+    image_data = requests.get(image_url).content
+
+    # Open image using Pillow
+    image = PIL.Image.open(BytesIO(image_data))
+
+    # Resize image to desired dimensions
+    image = image.resize((width, height))
+
+    # Create directory if it doesn't exist
+    directory = 'images'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    # Saving image with filename in format 'day_number_location.jpg' inside 'images' directory
+    filename = f'{directory}/{day_number}.png'
+    image.save(filename, 'PNG')
+
+    print(f"Image for {location_name} saved as {filename}")
+    # else:
+    #     print(f"No image found for {location_name}")
+    #     prompt_for_new_location(day_number, location_name, response)
 
 
 def fetch_image_new_location(day_number, location_name, response, width=600, height=400):
-    # Pexels API key (replace 'YOUR_API_KEY' with your actual Pexels API key)
-    pexels_api_key = 'aX1oVcA9l4t1zj7k221MvHWgxVYZME44eCKo3szkQj3cqGqMIbyRpgdL'
-    headers = {'Authorization': pexels_api_key}
-
+    
+    
     # Search query for location name
     query = location_name
+    image_url = None
 
-    # Pexels API endpoint for photo search
-    pexels_url = f'https://api.pexels.com/v1/search?query={query}&per_page=1'
+    # Step 1: Try fetching from Pixabay
+    pixabay_url = f'https://pixabay.com/api/?key={pixabay_api_key}&q={query}&image_type=photo&category=travel'
+    pixabay_response = requests.get(pixabay_url)
+    pixabay_data = pixabay_response.json()
 
-    # Making GET request to Pexels API
-    pexels_response = requests.get(pexels_url, headers=headers)
-    pexels_data = pexels_response.json()
-
-    # Check if response contains results
-    if 'photos' in pexels_data and len(pexels_data['photos']) > 0:
-        image_url = pexels_data['photos'][0]['src']['large']
-
-        # Downloading image
-        image_data = requests.get(image_url).content
-
-        # Open image using Pillow
-        image = PIL.Image.open(BytesIO(image_data))
-
-        # Resize image to desired dimensions
-        image = image.resize((width, height))
-
-        # Create directory if it doesn't exist
-        directory = 'images'
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        # Saving image with filename in format 'day_number_location.jpg' inside 'images' directory
-        filename = f'{directory}/Day {day_number}.png'
-        image.save(filename, 'PNG')
-
-        print(f"Image for {location_name} saved as {filename}")
+    # Check if Pixabay returns any results
+    if 'hits' in pixabay_data and len(pixabay_data['hits']) > 0:
+        image_url = pixabay_data['hits'][0]['largeImageURL']
+        print(f"Image found on Pixabay for {location_name}")
     else:
-        # If no image found on Pexels, call function to generate another attractive location
-        # print(f"No image found for {location_name}. Generating another attractive location for day {day_number}...")
-        prompt_for_new_location(day_number, location_name, response)
+        print(f"No image found on Pixabay for {location_name}, trying Pexels...")
+
+    # Step 2: Try fetching from Pexels if Pixabay fails
+    if not image_url:
+        pexels_url = f'https://api.pexels.com/v1/search?query={query}&per_page=1'
+        headers = {'Authorization': pexels_api_key}
+        pexels_response = requests.get(pexels_url, headers=headers)
+        pexels_data = pexels_response.json()
+
+        if 'photos' in pexels_data and len(pexels_data['photos']) > 0:
+            image_url = pexels_data['photos'][0]['src']['large']
+            print(f"Image found on Pexels for {location_name}")
+        else:
+            print(f"No image found on Pexels for {location_name}, trying Unsplash...")
+
+    # Step 3: Try fetching from Unsplash if Pexels fails
+    if not image_url:
+        unsplash_url = f'https://api.unsplash.com/search/photos?page=1&query={query}&per_page=1'
+        headers = {'Authorization': f'Client-ID {unsplash_access_key}'}
+        unsplash_response = requests.get(unsplash_url, headers=headers)
+        unsplash_data = unsplash_response.json()
+
+        if 'results' in unsplash_data and len(unsplash_data['results']) > 0:
+            image_url = unsplash_data['results'][0]['urls']['regular']
+            print(f"Image found on Unsplash for {location_name}")
+        else:
+            print(f"No image found for {location_name} on Pixabay, Pexels, or Unsplash.")
+            prompt_for_new_location(day_number, location_name, response)
+            return
+
+    # Downloading image
+    image_data = requests.get(image_url).content
+
+    # Open image using Pillow
+    image = PIL.Image.open(BytesIO(image_data))
+
+    # Resize image to desired dimensions
+    image = image.resize((width, height))
+
+    # Create directory if it doesn't exist
+    directory = 'images'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    # Saving image with filename in format 'day_number_location.jpg' inside 'images' directory
+    filename = f'{directory}/Day {day_number}.png'
+    image.save(filename, 'PNG')
+
+    print(f"Image for {location_name} saved as {filename}")
+    # else:
+    #     # If no image found on Pexels, call function to generate another attractive location
+    #     # print(f"No image found for {location_name}. Generating another attractive location for day {day_number}...")
+    #     prompt_for_new_location(day_number, location_name, response)
 
 
 def prompt_for_new_location(day_number, location_name, response):
@@ -568,43 +623,69 @@ def prompt_for_new_location(day_number, location_name, response):
 
 
 def fetch_and_save_banner_image(banner, width=600, height=400):
-    # Pexels API key (replace 'YOUR_API_KEY' with your actual Pexels API key)
-    api_key = PEXELS_API_KEY
-    headers = {'Authorization': api_key}
-
-    # Search query for location name
+    
     query = banner
+    image_url = None
 
-    # Pexels API endpoint for photo search
-    url = f'https://api.pexels.com/v1/search?query={query}&per_page=1'
+    # Step 1: Try fetching from Pixabay
+    pixabay_url = f'https://pixabay.com/api/?key={pixabay_api_key}&q={query}&image_type=photo&category=travel'
+    pixabay_response = requests.get(pixabay_url)
+    pixabay_data = pixabay_response.json()
 
-    # Making GET request to Pexels API
-    response = requests.get(url, headers=headers)
-    data = response.json()
-
-    # Check if response contains results
-    if 'photos' in data and len(data['photos']) > 0:
-        image_url = data['photos'][0]['src']['large']
-
-        # Downloading image
-        image_data = requests.get(image_url).content
-
-        # Open image using Pillow
-        image = PIL.Image.open(BytesIO(image_data))
-
-        image = image.resize((width, height))
-        # Create directory if it doesn't exist
-        directory = 'images'
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        # Saving image with filename in format 'day_number_location.jpg' inside 'images' directory
-        filename = f'{directory}/banner.png'
-        image.save(filename, 'PNG')
-
-        print(f"Image for {banner} saved as {filename}")
+    # Check if Pixabay returns any results
+    if 'hits' in pixabay_data and len(pixabay_data['hits']) > 0:
+        image_url = pixabay_data['hits'][0]['largeImageURL']
+        print(f"Image found on Pixabay for {banner}")
     else:
-        print(f"No image found for {banner}")
+        print(f"No image found on Pixabay for {banner}, trying Pexels...")
+
+    # Step 2: Try fetching from Pexels if Pixabay fails
+    if not image_url:
+        pexels_url = f'https://api.pexels.com/v1/search?query={query}&per_page=1'
+        headers = {'Authorization': pexels_api_key}
+        pexels_response = requests.get(pexels_url, headers=headers)
+        pexels_data = pexels_response.json()
+
+        if 'photos' in pexels_data and len(pexels_data['photos']) > 0:
+            image_url = pexels_data['photos'][0]['src']['large']
+            print(f"Image found on Pexels for {banner}")
+        else:
+            print(f"No image found on Pexels for {banner}, trying Unsplash...")
+
+    # Step 3: Try fetching from Unsplash if Pexels fails
+    if not image_url:
+        unsplash_url = f'https://api.unsplash.com/search/photos?page=1&query={query}&per_page=1'
+        headers = {'Authorization': f'Client-ID {unsplash_access_key}'}
+        unsplash_response = requests.get(unsplash_url, headers=headers)
+        unsplash_data = unsplash_response.json()
+
+        if 'results' in unsplash_data and len(unsplash_data['results']) > 0:
+            image_url = unsplash_data['results'][0]['urls']['regular']
+            print(f"Image found on Unsplash for {banner}")
+        else:
+            print(f"No image found for {banner} on Pixabay, Pexels, or Unsplash.")
+            prompt_for_new_location(day_number, banner, response)
+            return
+
+    # Downloading image if found
+    image_data = requests.get(image_url).content
+
+    # Open image using Pillow
+    image = PIL.Image.open(BytesIO(image_data))
+
+    # Resize image to desired dimensions
+    image = image.resize((width, height))
+
+    # Create directory if it doesn't exist
+    directory = 'images'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    # Saving image with filename 'banner.png' inside 'images' directory
+    filename = f'{directory}/banner.png'
+    image.save(filename, 'PNG')
+
+    print(f"Image for {banner} saved as {filename}")
 
 
 def delete_image_files(directory):
@@ -981,7 +1062,7 @@ if st.session_state.get('input_dict', False):
 
 if st.button("Generate Itinerary", type="primary"):
     # null_flag = False
-    # if 'OPENAI_API_KEY' not in env_vars or 'X-RapidAPI-Key' not in env_vars or 'AMADEUS_API_KEY' not in env_vars or 'AMADEUS_API_SECRET' not in env_vars or 'PEXELS_API_KEY' not in env_vars:
+    # if 'OPENAI_API_KEY' not in env_vars or 'X-RapidAPI-Key' not in env_vars or 'AMADEUS_API_KEY' not in env_vars or 'AMADEUS_API_SECRET' not in env_vars or ' _API_KEY' not in env_vars:
     #     st.warning('Enter all the API keys')
     #     null_flag = True
     # for key in input_dict.keys():
