@@ -1,4 +1,4 @@
-# Tour Itinerary Generator
+# AI Based Tour Itinerary Generator
 
 **Usage:**
 
