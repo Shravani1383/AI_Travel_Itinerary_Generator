@@ -305,7 +305,7 @@ def generate_itinerary(input_dict):
                   f"{input_dict['start_date']}, ending on {input_dict['end_date']}. Call the function 'get_flight_hotel_info'"
 
     completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         messages=[{"role": "user", "content": user_prompt}],
         # Add function calling
         functions=function_descriptions,
@@ -380,7 +380,7 @@ def generate_itinerary(input_dict):
                 "content": user_message,
             }
         ],
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         stream=True,
     )
 
@@ -427,7 +427,7 @@ def generate_itinerary(input_dict):
 
 
 def extract_attractive_locations(response):
-    # Define the GPT-3.5 prompt
+    # Define the GPT-4o mini prompt
     prompt = f"Extract any and only one attractive location from the following itinerary for all days right from day 1 to the last day" \
              f"not the complete line and organize them day wise such that they will be fetched individually from a particular day" \
              f"but printed in format like day number: location name one at a time" \
@@ -441,7 +441,7 @@ def extract_attractive_locations(response):
  \
         # Generate the travel itinerary using the modified user message
     chat_completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         messages=[
             {
                 "role": "user",
@@ -604,7 +604,7 @@ def prompt_for_new_location(day_number, location_name, response):
              f"provide only the location name in format Day Day number: new location name, do not provide whole response" \
         # Generate the travel itinerary using the modified user message
     new_location = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         messages=[
             {
                 "role": "user",
@@ -653,19 +653,19 @@ def fetch_and_save_banner_image(banner, width=600, height=400):
             print(f"No image found on Pexels for {banner}, trying Unsplash...")
 
     # Step 3: Try fetching from Unsplash if Pexels fails
-    if not image_url:
-        unsplash_url = f'https://api.unsplash.com/search/photos?page=1&query={query}&per_page=1'
-        headers = {'Authorization': f'Client-ID {unsplash_access_key}'}
-        unsplash_response = requests.get(unsplash_url, headers=headers)
-        unsplash_data = unsplash_response.json()
+    # if not image_url:
+    #     unsplash_url = f'https://api.unsplash.com/search/photos?page=1&query={query}&per_page=1'
+    #     headers = {'Authorization': f'Client-ID {unsplash_access_key}'}
+    #     unsplash_response = requests.get(unsplash_url, headers=headers)
+    #     unsplash_data = unsplash_response.json()
 
-        if 'results' in unsplash_data and len(unsplash_data['results']) > 0:
-            image_url = unsplash_data['results'][0]['urls']['regular']
-            print(f"Image found on Unsplash for {banner}")
-        else:
-            print(f"No image found for {banner} on Pixabay, Pexels, or Unsplash.")
-            prompt_for_new_location(day_number, banner, response)
-            return
+    #     if 'results' in unsplash_data and len(unsplash_data['results']) > 0:
+    #         image_url = unsplash_data['results'][0]['urls']['regular']
+    #         print(f"Image found on Unsplash for {banner}")
+    #     else:
+    #         print(f"No image found for {banner} on Pixabay, Pexels, or Unsplash.")
+    #         prompt_for_new_location(day_number, banner, response)
+    #         return
 
     # Downloading image if found
     image_data = requests.get(image_url).content
